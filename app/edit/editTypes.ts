@@ -10,6 +10,8 @@ export interface Layer {
   rotation?: number;
   x?: number;
   y?: number;
+  flipX?: boolean; // Whether the image should be flipped horizontally
+  flipY?: boolean; // Whether the image should be flipped vertically
 }
 
 export type GifFrame = {

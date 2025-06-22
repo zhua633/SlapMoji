@@ -6,6 +6,7 @@ interface FrameStripProps {
   selectedFrameIdx: number;
   onSelectFrame: (idx: number) => void;
   onAddFrame: () => void;
+  customPreviews?: string[]; // Optional custom preview images
 }
 
 const FrameStrip: React.FC<FrameStripProps> = ({
@@ -13,6 +14,7 @@ const FrameStrip: React.FC<FrameStripProps> = ({
   selectedFrameIdx,
   onSelectFrame,
   onAddFrame,
+  customPreviews = [],
 }) => (
   <div className="w-full max-w-5xl mt-4 flex items-center overflow-x-auto gap-3 pb-2">
     {frames.map((f, idx) => (
@@ -22,7 +24,11 @@ const FrameStrip: React.FC<FrameStripProps> = ({
         onClick={() => onSelectFrame(idx)}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={f.preview} alt={`Frame ${idx + 1}`} className="w-full h-full object-contain" />
+        <img 
+          src={customPreviews[idx] || f.preview} 
+          alt={`Frame ${idx + 1}`} 
+          className="w-full h-full object-contain" 
+        />
       </div>
     ))}
     {/* Plus square */}

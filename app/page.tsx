@@ -17,12 +17,15 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black text-white">
+    <div className="min-h-screen flex items-center justify-center bg-black text-white p-4">
       <UploadArea
         onFileSelected={setSelectedFile}
         value={selectedFile}
         showConfirm={true}
         onConfirm={handleConfirm}
+        height="min(500px, 80vh)"
+        fileTypes={["image/gif"]}
+        maxFileSize={10 * 1024 * 1024} // 10MB limit for GIF files
       />
     </div>
   );

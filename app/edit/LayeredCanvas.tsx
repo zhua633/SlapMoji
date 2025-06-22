@@ -10,6 +10,7 @@ interface LayeredCanvasProps {
   onImageMouseDown: (e: React.MouseEvent, layer: Layer) => void;
   onResizeMouseDown: (e: React.MouseEvent, layer: Layer) => void;
   onRotateMouseDown: (e: React.MouseEvent, layer: Layer) => void;
+  onFlipClick: (e: React.MouseEvent, layer: Layer, direction: 'horizontal' | 'vertical') => void;
 }
 
 const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
@@ -19,9 +20,10 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
   onImageMouseDown,
   onResizeMouseDown,
   onRotateMouseDown,
+  onFlipClick,
 }) => {
   return (
-    <div ref={editorRef} className="flex-1 flex items-center justify-center bg-gray-800 relative">
+    <div ref={editorRef} className="flex-1 flex items-center justify-center bg-gray-800 relative rounded-xl">
       {layers.length === 0 && <span className="text-gray-400">No image provided.</span>}
       {layers.map((layer, idx) => {
         if (layer.type !== "image" || !layer.src) return null;
@@ -50,7 +52,10 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 alt={layer.name}
                 className="w-full h-full object-contain rounded shadow-lg select-none"
                 draggable={false}
-                style={{ pointerEvents: "none" }}
+                style={{ 
+                  pointerEvents: "none",
+                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${layer.flipY ? -1 : 1})`
+                }}
               />
             ) : (
               <Image
@@ -60,7 +65,10 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 height={layer.height || DEFAULT_IMG_SIZE}
                 className="w-full h-full object-contain rounded shadow-lg select-none"
                 draggable={false}
-                style={{ pointerEvents: "none" }}
+                style={{ 
+                  pointerEvents: "none",
+                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${layer.flipY ? -1 : 1})`
+                }}
               />
             )}
             {isSelected && (
@@ -76,6 +84,39 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                   style={{ right: -10, bottom: -10, zIndex: 20 }}
                   onMouseDown={(e) => onResizeMouseDown(e, layer)}
                 />
+                {/* Flip handles */}
+                {/* Horizontal flip (top left) */}
+                <div
+                  className="absolute w-4 h-4 bg-purple-400 border-2 border-white rounded-full cursor-pointer flip-handle flex items-center justify-center"
+                  style={{ left: -10, top: -10, zIndex: 20 }}
+                  onClick={(e) => onFlipClick(e, layer, 'horizontal')}
+                  title="Flip Horizontal"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3" />
+                    <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
+                    <path d="M12 20v2" />
+                    <path d="M12 14v2" />
+                    <path d="M12 8v2" />
+                    <path d="M12 2v2" />
+                  </svg>
+                </div>
+                {/* Vertical flip (top right) */}
+                <div
+                  className="absolute w-4 h-4 bg-purple-400 border-2 border-white rounded-full cursor-pointer flip-handle flex items-center justify-center"
+                  style={{ right: -10, top: -10, zIndex: 20 }}
+                  onClick={(e) => onFlipClick(e, layer, 'vertical')}
+                  title="Flip Vertical"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3" />
+                    <path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 1-2 2v-3" />
+                    <path d="M20 12h2" />
+                    <path d="M14 12h2" />
+                    <path d="M8 12h2" />
+                    <path d="M2 12h2" />
+                  </svg>
+                </div>
                 {/* Rotate handle (top center) */}
                 <div
                   className="absolute w-4 h-4 bg-yellow-400 border-2 border-white rounded-full cursor-pointer rotate-handle"

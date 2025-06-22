@@ -21,7 +21,7 @@ const LayerList: React.FC<LayerListProps> = ({
   onDragEnd,
   editorHeight,
 }) => (
-  <div className="w-[350px] flex flex-col p-6 bg-gray-950 border-l border-gray-700" style={{ height: editorHeight }}>
+  <div className="w-[350px] flex flex-col" style={{ height: editorHeight }}>
     <div className="flex-1 bg-gray-800 rounded-lg shadow-inner flex flex-col p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="font-semibold text-white">Layers</span>
