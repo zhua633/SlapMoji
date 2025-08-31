@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 
 interface UploadAreaProps {
   onFileSelected?: (file: File | null) => void;
@@ -176,11 +177,13 @@ const UploadArea: React.FC<UploadAreaProps> = ({
               ? file.name.substring(0, 47) + "..."
               : file.name}
           </span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={previewUrl}
             alt="Preview"
+            width={500}
+            height={192}
             className="max-h-40 sm:max-h-48 max-w-full rounded shadow-lg object-contain"
+            unoptimized
           />
         </div>
       )}

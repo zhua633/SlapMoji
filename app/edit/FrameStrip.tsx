@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { Frame } from "./editTypes";
 import { PlusSquare } from "./PlusSquare";
@@ -52,9 +53,11 @@ const FrameStrip: React.FC<FrameStripProps> = ({
                       }
                     }}
                   >
-                    <img
+                    <Image
                       src={customPreviews[idx] || f.preview}
                       alt={`Frame ${idx + 1}`}
+                      width={80}
+                      height={80}
                       className="w-full h-full object-contain"
                       draggable={false}
                       style={{ pointerEvents: "none" }}
