@@ -1,5 +1,10 @@
 import React from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "react-beautiful-dnd";
 import { Layer } from "./editTypes";
 
 interface LayerListProps {
@@ -31,9 +36,25 @@ const LayerList: React.FC<LayerListProps> = ({
             aria-label="Add Layer"
             className="p-2 text-white hover:text-blue-300 flex items-center justify-center"
           >
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11 4V18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-              <path d="M4 11H18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 22 22"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M11 4V18"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M4 11H18"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
           <button
@@ -45,7 +66,12 @@ const LayerList: React.FC<LayerListProps> = ({
         </div>
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="layers-droppable">
+        <Droppable
+          droppableId="layers-droppable"
+          isDropDisabled={false}
+          isCombineEnabled={false}
+          ignoreContainerClipping={false}
+        >
           {(provided) => (
             <ul
               className="flex-1 overflow-y-auto space-y-2"
@@ -62,13 +88,25 @@ const LayerList: React.FC<LayerListProps> = ({
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       {...provided.dragHandleProps}
-                      className={`bg-gray-700 rounded px-3 py-2 flex items-center gap-2 text-sm text-white cursor-move transition-shadow ${snapshot.isDragging ? "shadow-2xl bg-gray-600" : ""} ${layer.id === selectedLayerId ? "ring-2 ring-blue-400" : ""}`}
+                      className={`bg-gray-700 rounded px-3 py-2 flex items-center gap-2 text-sm text-white cursor-move transition-shadow ${
+                        snapshot.isDragging ? "shadow-2xl bg-gray-600" : ""
+                      } ${
+                        layer.id === selectedLayerId
+                          ? "ring-2 ring-blue-400"
+                          : ""
+                      }`}
                       onClick={() => onSelectLayer(layer.id)}
                     >
                       {layer.type === "image" ? (
-                        <span className="inline-block w-2 h-2 flex-shrink-0 bg-green-400 rounded-full" title="Image Layer"></span>
+                        <span
+                          className="inline-block w-2 h-2 flex-shrink-0 bg-green-400 rounded-full"
+                          title="Image Layer"
+                        ></span>
                       ) : (
-                        <span className="inline-block w-2 h-2 flex-shrink-0 bg-gray-400 rounded-full" title="Blank Layer"></span>
+                        <span
+                          className="inline-block w-2 h-2 flex-shrink-0 bg-gray-400 rounded-full"
+                          title="Blank Layer"
+                        ></span>
                       )}
                       {layer.name}
                     </li>
@@ -84,4 +122,4 @@ const LayerList: React.FC<LayerListProps> = ({
   </div>
 );
 
-export default LayerList; 
+export default LayerList;

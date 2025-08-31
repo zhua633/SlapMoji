@@ -1,5 +1,5 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   useState,
   useRef,
@@ -70,6 +70,9 @@ export default function EditPageContent() {
 
   // State for live frame previews
   const [liveFramePreviews, setLiveFramePreviews] = useState<string[]>([]);
+
+  // Loading state to prevent flickering before image validation
+  const [isLoading, setIsLoading] = useState(true);
 
   // Function to generate preview image from layers
   const generateFramePreview = async (
@@ -323,76 +326,97 @@ export default function EditPageContent() {
   // Extract frames on initial upload
   useEffect(() => {
     async function extractFrames() {
-      if (!imgUrl) return;
-      const isGifType = imgType === "image/gif";
-      if (isGif(imgUrl) || isGifType) {
-        // Extract all frames from GIF
-        const response = await fetch(imgUrl);
-        const buffer = await response.arrayBuffer();
-        const gif = parseGIF(buffer);
-        const gifFrames = decompressFrames(gif, true);
-        const previews = gifFrames.map((frame) => {
-          // Convert frame patch to data URL
-          const frameCanvas = document.createElement("canvas");
-          frameCanvas.width = frame.dims.width;
-          frameCanvas.height = frame.dims.height;
-          const frameCtx = frameCanvas.getContext("2d");
-          if (frameCtx) {
-            const imageData = frameCtx.createImageData(
-              frame.dims.width,
-              frame.dims.height
-            );
-            imageData.data.set(frame.patch);
-            frameCtx.putImageData(imageData, 0, 0);
+      if (!imgUrl) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const isGifType = imgType === "image/gif";
+        if (isGif(imgUrl) || isGifType) {
+          // Extract all frames from GIF
+          const response = await fetch(imgUrl);
+          if (!response.ok) {
+            window.location.href = "/";
+            return;
           }
-          return {
-            preview: frameCanvas.toDataURL(),
-            frame,
+          const buffer = await response.arrayBuffer();
+          const gif = parseGIF(buffer);
+          const gifFrames = decompressFrames(gif, true);
+          const previews = gifFrames.map((frame) => {
+            // Convert frame patch to data URL
+            const frameCanvas = document.createElement("canvas");
+            frameCanvas.width = frame.dims.width;
+            frameCanvas.height = frame.dims.height;
+            const frameCtx = frameCanvas.getContext("2d");
+            if (frameCtx) {
+              const imageData = frameCtx.createImageData(
+                frame.dims.width,
+                frame.dims.height
+              );
+              imageData.data.set(frame.patch);
+              frameCtx.putImageData(imageData, 0, 0);
+            }
+            return {
+              preview: frameCanvas.toDataURL(),
+              frame,
+            };
+          });
+          setFrames(previews);
+          const initialLayer = {
+            id: "layer-1",
+            name: imgName || "Image Layer",
+            type: "image" as const,
+            src: previews[0].preview,
+            width: DEFAULT_IMG_SIZE,
+            height: DEFAULT_IMG_SIZE,
+            rotation: 0,
+            ...DEFAULT_IMG_POS,
           };
-        });
-        setFrames(previews);
-        // Initialize per-frame layers: each frame gets a copy of the initial image layer
-        const initialLayer = {
-          id: "layer-1",
-          name: imgName || "Image Layer",
-          type: "image" as const,
-          src: previews[0].preview,
-          width: DEFAULT_IMG_SIZE,
-          height: DEFAULT_IMG_SIZE,
-          rotation: 0,
-          ...DEFAULT_IMG_POS,
-        };
-        setFrameLayers(
-          previews.map((f) => [
-            {
-              ...initialLayer,
-              id: `layer-1`,
-              src: f.preview,
-              type: "image" as const,
-            },
-          ])
-        );
-        setSelectedFrameIdx(0);
-        setSelectedLayerId("layer-1");
-      } else {
-        // PNG/JPG: just one frame, use the canvas preview
-        setFrames([{ preview: imgUrl }]);
-        setFrameLayers([
-          [
-            {
-              id: "layer-1",
-              name: imgName || "Image Layer",
-              type: "image" as const,
-              src: imgUrl,
-              width: DEFAULT_IMG_SIZE,
-              height: DEFAULT_IMG_SIZE,
-              rotation: 0,
-              ...DEFAULT_IMG_POS,
-            },
-          ],
-        ]);
-        setSelectedFrameIdx(0);
-        setSelectedLayerId("layer-1");
+          setFrameLayers(
+            previews.map((f) => [
+              {
+                ...initialLayer,
+                id: `layer-1`,
+                src: f.preview,
+                type: "image" as const,
+              },
+            ])
+          );
+          setSelectedFrameIdx(0);
+          setSelectedLayerId("layer-1");
+          setIsLoading(false);
+        } else {
+          const img = new Image();
+          img.onerror = () => {
+            window.location.href = "/";
+            return;
+          };
+          img.onload = () => {
+            setFrames([{ preview: imgUrl }]);
+            setFrameLayers([
+              [
+                {
+                  id: "layer-1",
+                  name: imgName || "Image Layer",
+                  type: "image" as const,
+                  src: imgUrl,
+                  width: DEFAULT_IMG_SIZE,
+                  height: DEFAULT_IMG_SIZE,
+                  rotation: 0,
+                  ...DEFAULT_IMG_POS,
+                },
+              ],
+            ]);
+            setSelectedFrameIdx(0);
+            setSelectedLayerId("layer-1");
+            setIsLoading(false);
+          };
+          img.src = imgUrl;
+        }
+      } catch (error) {
+        window.location.href = "/";
+        return;
       }
     }
     extractFrames();
@@ -990,6 +1014,18 @@ export default function EditPageContent() {
     handleDeleteFrame,
     focusedElement,
   ]);
+
+  // Show loading screen while validating image
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading image...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

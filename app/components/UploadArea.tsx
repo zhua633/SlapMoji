@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 
 interface UploadAreaProps {
   onFileSelected?: (file: File | null) => void;
@@ -20,31 +20,52 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   onConfirm,
   hidePreview = false,
   buttonLabel = "Upload Image",
-  fileTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/svg+xml", "image/bmp"],
+  fileTypes = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "image/bmp",
+  ],
   height = "500px",
   maxFileSize,
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [internalFile, setInternalFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Use controlled or uncontrolled file state
   const file = value !== undefined ? value : internalFile;
 
+  // Create preview URL when file changes, only on client side
+  useEffect(() => {
+    if (file && typeof window !== "undefined") {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+
+      // Cleanup function to revoke the URL
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [file]);
+
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const isValidImage = (file: File) => {
-    return (
-      file.type.startsWith("image/") &&
-      fileTypes.includes(file.type)
-    );
+    return file.type.startsWith("image/") && fileTypes.includes(file.type);
   };
 
   const isValidFileSize = (file: File) => {
@@ -57,9 +78,13 @@ const UploadArea: React.FC<UploadAreaProps> = ({
     if (!isValidImage(file)) {
       if (onFileSelected) onFileSelected(null);
       if (value === undefined) setInternalFile(null);
-      const allowedTypes = fileTypes.length === 1 
-        ? fileTypes[0].replace('image/', '').toUpperCase()
-        : fileTypes.map(t => t.replace('image/', '').toUpperCase()).join(', ');
+      setPreviewUrl(null);
+      const allowedTypes =
+        fileTypes.length === 1
+          ? fileTypes[0].replace("image/", "").toUpperCase()
+          : fileTypes
+              .map((t) => t.replace("image/", "").toUpperCase())
+              .join(", ");
       setError(`Only ${allowedTypes} files are allowed.`);
       return;
     }
@@ -68,7 +93,12 @@ const UploadArea: React.FC<UploadAreaProps> = ({
     if (!isValidFileSize(file)) {
       if (onFileSelected) onFileSelected(null);
       if (value === undefined) setInternalFile(null);
-      setError(`File size must be ${formatFileSize(maxFileSize!)} or less. Current size: ${formatFileSize(file.size)}`);
+      setPreviewUrl(null);
+      setError(
+        `File size must be ${formatFileSize(
+          maxFileSize!
+        )} or less. Current size: ${formatFileSize(file.size)}`
+      );
       return;
     }
 
@@ -110,7 +140,9 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   return (
     <div
       className={`w-full max-w-2xl flex flex-col items-center justify-center border-4 border-dotted rounded-xl transition-colors duration-200 p-4 sm:p-6 md:p-8 ${
-        dragActive ? "border-blue-400 bg-black/60" : "border-gray-600 bg-black/80"
+        dragActive
+          ? "border-blue-400 bg-black/60"
+          : "border-gray-600 bg-black/80"
       }`}
       style={{ height }}
       onDragEnter={handleDrag}
@@ -121,7 +153,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
       <input
         ref={inputRef}
         type="file"
-        accept={fileTypes.join(',')}
+        accept={fileTypes.join(",")}
         className="hidden"
         onChange={handleChange}
       />
@@ -133,17 +165,20 @@ const UploadArea: React.FC<UploadAreaProps> = ({
         {buttonLabel}
       </button>
       <span className="text-gray-400 text-center mb-4">
-          or drag and drop an image here
+        or drag and drop an image here
       </span>
       {error && <span className="text-red-400 mt-2 text-center">{error}</span>}
-      {file && !error && !hidePreview && (
+      {file && !error && !hidePreview && previewUrl && (
         <div className="mt-4 sm:mt-6 flex flex-col items-center w-full max-w-full">
           <span className="text-green-400 text-center break-all px-2 sm:px-4 mb-3 sm:mb-4 text-sm sm:text-base max-w-full">
-            Selected: {file.name.length > 50 ? file.name.substring(0, 47) + '...' : file.name}
+            Selected:{" "}
+            {file.name.length > 50
+              ? file.name.substring(0, 47) + "..."
+              : file.name}
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={URL.createObjectURL(file)}
+            src={previewUrl}
             alt="Preview"
             className="max-h-40 sm:max-h-48 max-w-full rounded shadow-lg object-contain"
           />
@@ -162,4 +197,4 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   );
 };
 
-export default UploadArea; 
+export default UploadArea;
