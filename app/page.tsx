@@ -12,7 +12,9 @@ export default function Home() {
       const url = URL.createObjectURL(selectedFile);
       const fileName = encodeURIComponent(selectedFile.name);
       const fileType = encodeURIComponent(selectedFile.type);
-      router.push(`/edit?img=${encodeURIComponent(url)}&name=${fileName}&type=${fileType}`);
+      router.push(
+        `/edit?img=${encodeURIComponent(url)}&name=${fileName}&type=${fileType}`
+      );
     }
   };
 

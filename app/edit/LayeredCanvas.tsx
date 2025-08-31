@@ -10,7 +10,12 @@ interface LayeredCanvasProps {
   onImageMouseDown: (e: React.MouseEvent, layer: Layer) => void;
   onResizeMouseDown: (e: React.MouseEvent, layer: Layer) => void;
   onRotateMouseDown: (e: React.MouseEvent, layer: Layer) => void;
-  onFlipClick: (e: React.MouseEvent, layer: Layer, direction: 'horizontal' | 'vertical') => void;
+  onFlipClick: (
+    e: React.MouseEvent,
+    layer: Layer,
+    direction: "horizontal" | "vertical"
+  ) => void;
+  onImageClick?: (layer: Layer) => void;
 }
 
 const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
@@ -21,29 +26,45 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
   onResizeMouseDown,
   onRotateMouseDown,
   onFlipClick,
+  onImageClick,
 }) => {
   return (
-    <div ref={editorRef} className="flex-1 flex items-center justify-center bg-gray-800 relative rounded-xl">
-      {layers.length === 0 && <span className="text-gray-400">No image provided.</span>}
+    <div
+      ref={editorRef}
+      className="flex-1 flex items-center justify-center bg-gray-800 relative rounded-xl"
+    >
+      {layers.length === 0 && (
+        <span className="text-gray-400">No image provided.</span>
+      )}
       {layers.map((layer, idx) => {
         if (layer.type !== "image" || !layer.src) return null;
         const isSelected = layer.id === selectedLayerId;
-        const isDataUrl = layer.src.startsWith('data:') || layer.src.startsWith('blob:');
+        const isDataUrl =
+          layer.src.startsWith("data:") || layer.src.startsWith("blob:");
         return (
           <div
             key={layer.id}
             style={{
               zIndex: idx + 1,
               position: "absolute",
-              left: `calc(50% + ${(layer.x || 0)}px)`,
-              top: `calc(50% + ${(layer.y || 0)}px)`,
+              left: `calc(50% + ${layer.x || 0}px)`,
+              top: `calc(50% + ${layer.y || 0}px)`,
               width: layer.width || DEFAULT_IMG_SIZE,
               height: layer.height || DEFAULT_IMG_SIZE,
-              transform: `translate(-50%, -50%) rotate(${layer.rotation || 0}deg)`,
-              pointerEvents: isSelected ? "auto" : "none",
-              cursor: isSelected ? "move" : "default",
+              transform: `translate(-50%, -50%) rotate(${
+                layer.rotation || 0
+              }deg)`,
+              pointerEvents: "auto",
+              cursor: isSelected ? "move" : "pointer",
             }}
-            onMouseDown={isSelected ? (e) => onImageMouseDown(e, layer) : undefined}
+            onMouseDown={(e) => {
+              if (isSelected) {
+                onImageMouseDown(e, layer);
+              } else {
+                // Select the layer when clicking on unselected image
+                onImageClick?.(layer);
+              }
+            }}
           >
             {isDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -52,9 +73,11 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 alt={layer.name}
                 className="w-full h-full object-contain rounded shadow-lg select-none"
                 draggable={false}
-                style={{ 
+                style={{
                   pointerEvents: "none",
-                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${layer.flipY ? -1 : 1})`
+                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${
+                    layer.flipY ? -1 : 1
+                  })`,
                 }}
               />
             ) : (
@@ -65,9 +88,11 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 height={layer.height || DEFAULT_IMG_SIZE}
                 className="w-full h-full object-contain rounded shadow-lg select-none"
                 draggable={false}
-                style={{ 
+                style={{
                   pointerEvents: "none",
-                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${layer.flipY ? -1 : 1})`
+                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${
+                    layer.flipY ? -1 : 1
+                  })`,
                 }}
               />
             )}
@@ -89,10 +114,17 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 <div
                   className="absolute w-4 h-4 bg-purple-400 border-2 border-white rounded-full cursor-pointer flip-handle flex items-center justify-center"
                   style={{ left: -10, top: -10, zIndex: 20 }}
-                  onClick={(e) => onFlipClick(e, layer, 'horizontal')}
+                  onClick={(e) => onFlipClick(e, layer, "horizontal")}
                   title="Flip Horizontal"
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="2"
+                  >
                     <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3" />
                     <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
                     <path d="M12 20v2" />
@@ -105,10 +137,17 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 <div
                   className="absolute w-4 h-4 bg-purple-400 border-2 border-white rounded-full cursor-pointer flip-handle flex items-center justify-center"
                   style={{ right: -10, top: -10, zIndex: 20 }}
-                  onClick={(e) => onFlipClick(e, layer, 'vertical')}
+                  onClick={(e) => onFlipClick(e, layer, "vertical")}
                   title="Flip Vertical"
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="2"
+                  >
                     <path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3" />
                     <path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 1-2 2v-3" />
                     <path d="M20 12h2" />
@@ -120,7 +159,12 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 {/* Rotate handle (top center) */}
                 <div
                   className="absolute w-4 h-4 bg-yellow-400 border-2 border-white rounded-full cursor-pointer rotate-handle"
-                  style={{ left: "50%", top: -24, transform: "translateX(-50%)", zIndex: 20 }}
+                  style={{
+                    left: "50%",
+                    top: -24,
+                    transform: "translateX(-50%)",
+                    zIndex: 20,
+                  }}
                   onMouseDown={(e) => onRotateMouseDown(e, layer)}
                 />
               </>
@@ -132,4 +176,4 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
   );
 };
 
-export default LayeredCanvas; 
+export default LayeredCanvas;
