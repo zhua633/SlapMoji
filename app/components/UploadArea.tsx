@@ -133,10 +133,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
         {buttonLabel}
       </button>
       <span className="text-gray-400 text-center mb-4">
-        {fileTypes.length === 1 && fileTypes[0] === "image/png" 
-          ? "or drag and drop a PNG image here"
-          : "or drag and drop an image here"
-        }
+          "or drag and drop an image here"
       </span>
       {error && <span className="text-red-400 mt-2 text-center">{error}</span>}
       {file && !error && !hidePreview && (

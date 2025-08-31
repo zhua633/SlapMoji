@@ -24,7 +24,7 @@ export default function Home() {
         showConfirm={true}
         onConfirm={handleConfirm}
         height="min(500px, 80vh)"
-        fileTypes={["image/gif"]}
+        fileTypes={["image/gif", "image/png"]}
         maxFileSize={10 * 1024 * 1024} // 10MB limit for GIF files
       />
     </div>

@@ -1,5 +1,3 @@
-// Types and interfaces for EditPageContent and related components
-
 export interface Layer {
   id: string;
   name: string;
@@ -10,8 +8,8 @@ export interface Layer {
   rotation?: number;
   x?: number;
   y?: number;
-  flipX?: boolean; // Whether the image should be flipped horizontally
-  flipY?: boolean; // Whether the image should be flipped vertically
+  flipX?: boolean;
+  flipY?: boolean;
 }
 
 export type GifFrame = {
