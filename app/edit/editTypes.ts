@@ -19,6 +19,7 @@ export type GifFrame = {
 };
 
 export type Frame = {
+  id: string;
   preview: string;
   frame?: GifFrame;
 }; 

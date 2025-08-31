@@ -5,11 +5,14 @@ export const DEFAULT_IMG_POS = { x: 0, y: 0 };
 
 export const isGif = (src: string) => src.toLowerCase().endsWith('.gif') || src.startsWith('data:image/gif');
 
-export function createBlankFrame(width: number, height: number): { preview: string } {
+export function createBlankFrame(width: number, height: number): { id: string; preview: string } {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (ctx) ctx.clearRect(0, 0, width, height);
-  return { preview: canvas.toDataURL() };
+  return { 
+    id: `temp-blank-frame`, // This will be replaced by the caller
+    preview: canvas.toDataURL() 
+  };
 } 

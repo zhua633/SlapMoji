@@ -22,7 +22,7 @@ import {
   isGif,
   createBlankFrame,
 } from "./editUtils";
-import { DropResult } from "react-beautiful-dnd";
+import { DropResult, DragDropContext } from "@hello-pangea/dnd";
 
 export default function EditPageContent() {
   const searchParams = useSearchParams();
@@ -67,12 +67,26 @@ export default function EditPageContent() {
 
   // State for copy-paste
   const [copiedLayer, setCopiedLayer] = useState<Layer | null>(null);
+  const [copiedFrame, setCopiedFrame] = useState<{
+    frame: Frame;
+    layers: Layer[];
+  } | null>(null);
 
   // State for live frame previews
   const [liveFramePreviews, setLiveFramePreviews] = useState<string[]>([]);
 
   // Loading state to prevent flickering before image validation
   const [isLoading, setIsLoading] = useState(true);
+  // State to track if component is mounted (for SSR compatibility)
+  const [isMounted, setIsMounted] = useState(false);
+  // Counter for generating stable frame IDs
+  const frameIdCounter = useRef(0);
+
+  // Function to generate stable frame ID
+  const generateFrameId = (prefix: string = "frame") => {
+    frameIdCounter.current += 1;
+    return `${prefix}-${frameIdCounter.current}`;
+  };
 
   // Function to generate preview image from layers
   const generateFramePreview = async (
@@ -314,6 +328,7 @@ export default function EditPageContent() {
   };
 
   useLayoutEffect(() => {
+    setIsMounted(true);
     if (editorRef.current) {
       const rect = editorRef.current.getBoundingClientRect();
       setEditorSize({
@@ -358,6 +373,7 @@ export default function EditPageContent() {
               frameCtx.putImageData(imageData, 0, 0);
             }
             return {
+              id: generateFrameId("gif-frame"),
               preview: frameCanvas.toDataURL(),
               frame,
             };
@@ -393,7 +409,12 @@ export default function EditPageContent() {
             return;
           };
           img.onload = () => {
-            setFrames([{ preview: imgUrl }]);
+            setFrames([
+              {
+                id: generateFrameId("static-frame"),
+                preview: imgUrl,
+              },
+            ]);
             setFrameLayers([
               [
                 {
@@ -458,19 +479,66 @@ export default function EditPageContent() {
     handleModalClose();
   };
 
-  // Drag and drop handlers
+  // Unified drag and drop handler for both layers and frames
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    setFrameLayers((prev: Layer[][]) =>
-      prev.map((layers, idx) => {
-        if (idx !== selectedFrameIdx) return layers;
-        const reordered = Array.from(layers);
-        if (!result.destination) return layers;
-        const [removed] = reordered.splice(result.source.index, 1);
-        reordered.splice(result.destination.index, 0, removed);
+
+    const { source, destination } = result;
+
+    // Handle frame reordering
+    if (
+      source.droppableId === "frames-droppable" &&
+      destination.droppableId === "frames-droppable"
+    ) {
+      const sourceIndex = source.index;
+      const destinationIndex = destination.index;
+
+      // Reorder frames array
+      setFrames((prev) => {
+        const reordered = Array.from(prev);
+        const [removed] = reordered.splice(sourceIndex, 1);
+        reordered.splice(destinationIndex, 0, removed);
         return reordered;
-      })
-    );
+      });
+
+      // Reorder corresponding frameLayers
+      setFrameLayers((prev: Layer[][]) => {
+        const reordered = Array.from(prev);
+        const [removed] = reordered.splice(sourceIndex, 1);
+        reordered.splice(destinationIndex, 0, removed);
+        return reordered;
+      });
+
+      // Update selectedFrameIdx if the selected frame was moved
+      if (selectedFrameIdx === sourceIndex) {
+        setSelectedFrameIdx(destinationIndex);
+      } else if (
+        selectedFrameIdx > sourceIndex &&
+        selectedFrameIdx <= destinationIndex
+      ) {
+        setSelectedFrameIdx(selectedFrameIdx - 1);
+      } else if (
+        selectedFrameIdx < sourceIndex &&
+        selectedFrameIdx >= destinationIndex
+      ) {
+        setSelectedFrameIdx(selectedFrameIdx + 1);
+      }
+    }
+    // Handle layer reordering
+    else if (
+      source.droppableId === "layers-droppable" &&
+      destination.droppableId === "layers-droppable"
+    ) {
+      setFrameLayers((prev: Layer[][]) =>
+        prev.map((layers, idx) => {
+          if (idx !== selectedFrameIdx) return layers;
+          const reordered = Array.from(layers);
+          const [removed] = reordered.splice(source.index, 1);
+          reordered.splice(destination.index, 0, removed);
+          return reordered;
+        })
+      );
+    }
   };
 
   // Layer selection
@@ -827,6 +895,8 @@ export default function EditPageContent() {
   // Add blank frame
   const handleAddFrame = () => {
     const blank = createBlankFrame(editorSize.width, editorSize.height);
+    // Replace the generated ID with our stable ID
+    blank.id = generateFrameId("blank-frame");
     setFrames((prev) => [...prev, blank]);
     // Create a blank frame with no layers
     setFrameLayers((prev: Layer[][]) => {
@@ -935,29 +1005,72 @@ export default function EditPageContent() {
       const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
 
       // Copy (Ctrl/Cmd+C)
-      if (ctrlKey && e.key.toLowerCase() === "c" && selectedLayerId) {
-        const layer = frameLayers[selectedFrameIdx]?.find(
-          (l) => l.id === selectedLayerId
-        );
-        if (layer) {
-          setCopiedLayer({ ...layer });
+      if (ctrlKey && e.key.toLowerCase() === "c") {
+        if (focusedElement === "layer" && selectedLayerId) {
+          // Copy layer
+          const layer = frameLayers[selectedFrameIdx]?.find(
+            (l) => l.id === selectedLayerId
+          );
+          if (layer) {
+            setCopiedLayer({ ...layer });
+          }
+        } else if (focusedElement === "frame") {
+          // Copy frame
+          const frame = frames[selectedFrameIdx];
+          const layers = frameLayers[selectedFrameIdx] || [];
+          if (frame) {
+            setCopiedFrame({
+              frame: { ...frame },
+              layers: layers.map((layer) => ({ ...layer })),
+            });
+          }
         }
       }
 
       // Paste (Ctrl/Cmd+V)
-      if (ctrlKey && e.key.toLowerCase() === "v" && copiedLayer) {
-        e.preventDefault();
-        setFrameLayers((prev: Layer[][]) =>
-          prev.map((layers, idx) => {
-            if (idx !== selectedFrameIdx) return layers;
-            // Generate a new unique id for the pasted layer
-            const newId = `layer-${layers.length + 1}`;
-            const pastedLayer = { ...copiedLayer, id: newId };
-            setSelectedLayerId(newId);
-            setFocusedElement("layer"); // Set focus to layer when pasting
-            return [...layers, pastedLayer];
-          })
-        );
+      if (ctrlKey && e.key.toLowerCase() === "v") {
+        if (focusedElement === "layer" && copiedLayer) {
+          // Paste layer
+          e.preventDefault();
+          setFrameLayers((prev: Layer[][]) =>
+            prev.map((layers, idx) => {
+              if (idx !== selectedFrameIdx) return layers;
+              // Generate a new unique id for the pasted layer
+              const newId = `layer-${layers.length + 1}`;
+              const pastedLayer = { ...copiedLayer, id: newId };
+              setSelectedLayerId(newId);
+              setFocusedElement("layer"); // Set focus to layer when pasting
+              return [...layers, pastedLayer];
+            })
+          );
+        } else if (focusedElement === "frame" && copiedFrame) {
+          // Paste frame
+          e.preventDefault();
+          const newFrameIndex = frames.length;
+
+          // Add the copied frame to frames array with new ID
+          setFrames((prev) => [
+            ...prev,
+            {
+              ...copiedFrame.frame,
+              id: generateFrameId("copied-frame"),
+            },
+          ]);
+
+          // Add the copied layers to frameLayers with new unique IDs
+          setFrameLayers((prev: Layer[][]) => {
+            const newLayers = copiedFrame.layers.map((layer, idx) => ({
+              ...layer,
+              id: `layer-${Date.now()}-${idx}`, // Generate unique IDs
+            }));
+            return [...prev, newLayers];
+          });
+
+          // Select the newly pasted frame
+          setSelectedFrameIdx(newFrameIndex);
+          setSelectedLayerId(null);
+          setFocusedElement("frame");
+        }
       }
 
       // Delete (Delete key or Backspace key)
@@ -1009,8 +1122,10 @@ export default function EditPageContent() {
   }, [
     selectedLayerId,
     copiedLayer,
+    copiedFrame,
     frameLayers,
     selectedFrameIdx,
+    frames,
     handleDeleteFrame,
     focusedElement,
   ]);
@@ -1027,66 +1142,79 @@ export default function EditPageContent() {
     );
   }
 
+  // Don't render DragDropContext on server side
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading editor...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-8"
-      onClick={(e) => {
-        // Clear focus when clicking on empty areas
-        if (e.target === e.currentTarget) {
-          setFocusedElement(null);
-          setSelectedLayerId(null);
-        }
-      }}
-    >
+    <DragDropContext onDragEnd={onDragEnd}>
       <div
-        className="flex w-full max-w-5xl overflow-hidden gap-6"
-        style={{ height: editorSize.height }}
+        className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-8"
+        onClick={(e) => {
+          // Clear focus when clicking on empty areas
+          if (e.target === e.currentTarget) {
+            setFocusedElement(null);
+            setSelectedLayerId(null);
+          }
+        }}
       >
-        {/* Left: Superimposed Images */}
-        <LayeredCanvas
-          layers={displayLayers || []}
-          selectedLayerId={selectedLayerId}
-          editorRef={editorRef}
-          onImageMouseDown={handleImageMouseDown}
-          onResizeMouseDown={handleResizeMouseDown}
-          onRotateMouseDown={handleRotateMouseDown}
-          onFlipClick={handleFlipClick}
-          onImageClick={handleImageClick}
+        <div
+          className="flex w-full max-w-5xl overflow-hidden gap-6"
+          style={{ height: editorSize.height }}
+        >
+          {/* Left: Superimposed Images */}
+          <LayeredCanvas
+            layers={displayLayers || []}
+            selectedLayerId={selectedLayerId}
+            editorRef={editorRef}
+            onImageMouseDown={handleImageMouseDown}
+            onResizeMouseDown={handleResizeMouseDown}
+            onRotateMouseDown={handleRotateMouseDown}
+            onFlipClick={handleFlipClick}
+            onImageClick={handleImageClick}
+          />
+          {/* Right: Layers box, same height as canvas */}
+          <LayerList
+            layers={frameLayers[safeFrameIdx] || []}
+            selectedLayerId={selectedLayerId}
+            onSelectLayer={handleSelectLayer}
+            onAddLayerClick={handleAddLayerClick}
+            onExportClick={handleExport}
+            editorHeight={editorSize.height}
+          />
+        </div>
+        {/* Frame row at the bottom */}
+        <FrameStrip
+          frames={frames}
+          selectedFrameIdx={selectedFrameIdx}
+          onSelectFrame={handleSelectFrame}
+          onAddFrame={handleAddFrame}
+          customPreviews={liveFramePreviews}
         />
-        {/* Right: Layers box, same height as canvas */}
-        <LayerList
-          layers={frameLayers[safeFrameIdx] || []}
-          selectedLayerId={selectedLayerId}
-          onSelectLayer={handleSelectLayer}
-          onAddLayerClick={handleAddLayerClick}
-          onExportClick={handleExport}
-          onDragEnd={onDragEnd}
-          editorHeight={editorSize.height}
+        {/* Export format dialog */}
+        <ExportDialog
+          show={showExportDialog}
+          exporting={exporting}
+          onExport={doExport}
+          onClose={() => setShowExportDialog(false)}
+        />
+        {/* Modal Dialog for Adding Layer */}
+        <AddLayerModal
+          show={showModal}
+          newLayerImage={newLayerImage}
+          onFileSelected={setNewLayerImage}
+          onCreateLayer={handleCreateLayer}
+          onClose={handleModalClose}
         />
       </div>
-      {/* Frame row at the bottom */}
-      <FrameStrip
-        frames={frames}
-        selectedFrameIdx={selectedFrameIdx}
-        onSelectFrame={handleSelectFrame}
-        onAddFrame={handleAddFrame}
-        customPreviews={liveFramePreviews}
-      />
-      {/* Export format dialog */}
-      <ExportDialog
-        show={showExportDialog}
-        exporting={exporting}
-        onExport={doExport}
-        onClose={() => setShowExportDialog(false)}
-      />
-      {/* Modal Dialog for Adding Layer */}
-      <AddLayerModal
-        show={showModal}
-        newLayerImage={newLayerImage}
-        onFileSelected={setNewLayerImage}
-        onCreateLayer={handleCreateLayer}
-        onClose={handleModalClose}
-      />
-    </div>
+    </DragDropContext>
   );
 }
