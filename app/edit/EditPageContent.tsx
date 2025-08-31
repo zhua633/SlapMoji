@@ -1,5 +1,5 @@
 "use client";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   useState,
   useRef,
@@ -414,7 +414,7 @@ export default function EditPageContent() {
           };
           img.src = imgUrl;
         }
-      } catch (error) {
+      } catch (_) {
         window.location.href = "/";
         return;
       }
