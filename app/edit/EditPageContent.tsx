@@ -414,7 +414,7 @@ export default function EditPageContent() {
           };
           img.src = imgUrl;
         }
-      } catch (_) {
+      } catch {
         window.location.href = "/";
         return;
       }
