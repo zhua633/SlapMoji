@@ -123,15 +123,24 @@ export default function EditPageContent() {
           ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
         }
 
-        // Draw text (no background or border)
-        ctx.fillStyle = layer.color || "#ffffff";
-        ctx.font = `${layer.fontSize || 24}px ${
-          layer.fontFamily || "Arial, sans-serif"
+        // Draw text with stroke outline
+        ctx.font = `${layer.fontWeight || "bold"} ${layer.fontSize || 48}px ${
+          layer.fontFamily || "Impact, sans-serif"
         }`;
         ctx.textAlign = layer.textAlign || "center";
         ctx.textBaseline = "middle";
 
-        const text = layer.text || "Sample Text";
+        const text = layer.text || "MEME TEXT";
+
+        // Draw stroke
+        ctx.strokeStyle = layer.strokeColor || "#000000";
+        ctx.lineWidth = (layer.strokeWidth || 3) * 2; // Double for better visibility
+        ctx.lineJoin = "round";
+        ctx.miterLimit = 2;
+        ctx.strokeText(text, 0, 0);
+
+        // Draw fill
+        ctx.fillStyle = layer.color || "#ffffff";
         ctx.fillText(text, 0, 0);
 
         ctx.restore();
@@ -278,15 +287,24 @@ export default function EditPageContent() {
           ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
         }
 
-        // Draw text (no background or border)
-        ctx.fillStyle = layer.color || "#ffffff";
-        ctx.font = `${layer.fontSize || 24}px ${
-          layer.fontFamily || "Arial, sans-serif"
+        // Draw text with stroke outline
+        ctx.font = `${layer.fontWeight || "bold"} ${layer.fontSize || 48}px ${
+          layer.fontFamily || "Impact, sans-serif"
         }`;
         ctx.textAlign = layer.textAlign || "center";
         ctx.textBaseline = "middle";
 
-        const text = layer.text || "Sample Text";
+        const text = layer.text || "MEME TEXT";
+
+        // Draw stroke
+        ctx.strokeStyle = layer.strokeColor || "#000000";
+        ctx.lineWidth = (layer.strokeWidth || 3) * 2; // Double for better visibility
+        ctx.lineJoin = "round";
+        ctx.miterLimit = 2;
+        ctx.strokeText(text, 0, 0);
+
+        // Draw fill
+        ctx.fillStyle = layer.color || "#ffffff";
         ctx.fillText(text, 0, 0);
 
         ctx.restore();
@@ -366,15 +384,24 @@ export default function EditPageContent() {
           ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
         }
 
-        // Draw text (no background or border)
-        ctx.fillStyle = layer.color || "#ffffff";
-        ctx.font = `${layer.fontSize || 24}px ${
-          layer.fontFamily || "Arial, sans-serif"
+        // Draw text with stroke outline
+        ctx.font = `${layer.fontWeight || "bold"} ${layer.fontSize || 48}px ${
+          layer.fontFamily || "Impact, sans-serif"
         }`;
         ctx.textAlign = layer.textAlign || "center";
         ctx.textBaseline = "middle";
 
-        const text = layer.text || "Sample Text";
+        const text = layer.text || "MEME TEXT";
+
+        // Draw stroke
+        ctx.strokeStyle = layer.strokeColor || "#000000";
+        ctx.lineWidth = (layer.strokeWidth || 3) * 2; // Double for better visibility
+        ctx.lineJoin = "round";
+        ctx.miterLimit = 2;
+        ctx.strokeText(text, 0, 0);
+
+        // Draw fill
+        ctx.fillStyle = layer.color || "#ffffff";
         ctx.fillText(text, 0, 0);
 
         ctx.restore();
@@ -557,10 +584,13 @@ export default function EditPageContent() {
         id: `text-layer-${prev[selectedFrameIdx]?.length + 1 || 1}`,
         name: `Text Layer ${layerNumber}`,
         type: "text",
-        text: "Sample Text",
-        fontSize: 24,
-        fontFamily: "Arial, sans-serif",
+        text: "MEME TEXT",
+        fontSize: 48,
+        fontFamily: "Impact, sans-serif",
+        fontWeight: "bold",
         color: "#ffffff",
+        strokeColor: "#000000",
+        strokeWidth: 3,
         textAlign: "center",
         width: 200,
         height: 50,
