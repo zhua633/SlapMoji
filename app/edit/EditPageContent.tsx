@@ -38,6 +38,8 @@ export default function EditPageContent() {
   const [focusedElement, setFocusedElement] = useState<
     "frame" | "layer" | null
   >(null);
+  // State to track whether text properties panel is visible
+  const [showTextProperties, setShowTextProperties] = useState(false);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -105,42 +107,71 @@ export default function EditPageContent() {
 
     // Draw all layers
     for (const layer of layers) {
-      if (layer.type !== "image" || !layer.src) continue;
+      if (layer.type === "blank") continue;
+      if (layer.type === "image" && !layer.src) continue;
 
-      await new Promise((resolve) => {
-        const img = new window.Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          ctx.save();
-          const cx = canvasWidth / 2 + (layer.x || 0);
-          const cy = canvasHeight / 2 + (layer.y || 0);
-          ctx.translate(cx, cy);
-          ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
+      if (layer.type === "text") {
+        // Draw text layer
+        ctx.save();
+        const cx = canvasWidth / 2 + (layer.x || 0);
+        const cy = canvasHeight / 2 + (layer.y || 0);
+        ctx.translate(cx, cy);
+        ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
 
-          // Apply flip transformations
-          if (layer.flipX || layer.flipY) {
-            ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
-          }
+        // Apply flip transformations
+        if (layer.flipX || layer.flipY) {
+          ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+        }
 
-          const boxW = layer.width || DEFAULT_IMG_SIZE;
-          const boxH = layer.height || DEFAULT_IMG_SIZE;
-          const imgAR = img.width / img.height;
-          const boxAR = boxW / boxH;
-          let drawW = boxW;
-          let drawH = boxH;
-          if (imgAR > boxAR) {
-            drawW = boxW;
-            drawH = boxW / imgAR;
-          } else {
-            drawH = boxH;
-            drawW = boxH * imgAR;
-          }
-          ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-          ctx.restore();
-          resolve(null);
-        };
-        img.src = layer.src || "";
-      });
+        // Draw text (no background or border)
+        ctx.fillStyle = layer.color || "#ffffff";
+        ctx.font = `${layer.fontSize || 24}px ${
+          layer.fontFamily || "Arial, sans-serif"
+        }`;
+        ctx.textAlign = layer.textAlign || "center";
+        ctx.textBaseline = "middle";
+
+        const text = layer.text || "Sample Text";
+        ctx.fillText(text, 0, 0);
+
+        ctx.restore();
+      } else {
+        // Draw image layer
+        await new Promise((resolve) => {
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            ctx.save();
+            const cx = canvasWidth / 2 + (layer.x || 0);
+            const cy = canvasHeight / 2 + (layer.y || 0);
+            ctx.translate(cx, cy);
+            ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
+
+            // Apply flip transformations
+            if (layer.flipX || layer.flipY) {
+              ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+            }
+
+            const boxW = layer.width || DEFAULT_IMG_SIZE;
+            const boxH = layer.height || DEFAULT_IMG_SIZE;
+            const imgAR = img.width / img.height;
+            const boxAR = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
+            if (imgAR > boxAR) {
+              drawW = boxW;
+              drawH = boxW / imgAR;
+            } else {
+              drawH = boxH;
+              drawW = boxH * imgAR;
+            }
+            ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+            ctx.restore();
+            resolve(null);
+          };
+          img.src = layer.src || "";
+        });
+      }
     }
 
     return canvas.toDataURL("image/png");
@@ -162,7 +193,8 @@ export default function EditPageContent() {
     let maxY = -Infinity;
 
     for (const layer of layers) {
-      if (layer.type !== "image" || !layer.src) continue;
+      if (layer.type === "blank") continue;
+      if (layer.type === "image" && !layer.src) continue;
 
       const boxW = layer.width || DEFAULT_IMG_SIZE;
       const boxH = layer.height || DEFAULT_IMG_SIZE;
@@ -228,45 +260,76 @@ export default function EditPageContent() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (const layer of layers) {
-      if (layer.type !== "image" || !layer.src) continue;
+      if (layer.type === "blank") continue;
+      if (layer.type === "image" && !layer.src) continue;
 
-      await new Promise((resolve) => {
-        const img = new window.Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          ctx.save();
+      if (layer.type === "text") {
+        // Draw text layer
+        ctx.save();
 
-          // Calculate position relative to the new canvas
-          // Layer positions are relative to center of original canvas, so we need to adjust
-          const cx = canvas.width / 2 + (layer.x || 0) + offsetX;
-          const cy = canvas.height / 2 + (layer.y || 0) + offsetY;
-          ctx.translate(cx, cy);
-          ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
+        // Calculate position relative to the new canvas
+        const cx = canvas.width / 2 + (layer.x || 0) + offsetX;
+        const cy = canvas.height / 2 + (layer.y || 0) + offsetY;
+        ctx.translate(cx, cy);
+        ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
 
-          // Apply flip transformations
-          if (layer.flipX || layer.flipY) {
-            ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
-          }
+        // Apply flip transformations
+        if (layer.flipX || layer.flipY) {
+          ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+        }
 
-          const boxW = layer.width || DEFAULT_IMG_SIZE;
-          const boxH = layer.height || DEFAULT_IMG_SIZE;
-          const imgAR = img.width / img.height;
-          const boxAR = boxW / boxH;
-          let drawW = boxW;
-          let drawH = boxH;
-          if (imgAR > boxAR) {
-            drawW = boxW;
-            drawH = boxW / imgAR;
-          } else {
-            drawH = boxH;
-            drawW = boxH * imgAR;
-          }
-          ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-          ctx.restore();
-          resolve(null);
-        };
-        img.src = layer.src || "";
-      });
+        // Draw text (no background or border)
+        ctx.fillStyle = layer.color || "#ffffff";
+        ctx.font = `${layer.fontSize || 24}px ${
+          layer.fontFamily || "Arial, sans-serif"
+        }`;
+        ctx.textAlign = layer.textAlign || "center";
+        ctx.textBaseline = "middle";
+
+        const text = layer.text || "Sample Text";
+        ctx.fillText(text, 0, 0);
+
+        ctx.restore();
+      } else {
+        // Draw image layer
+        await new Promise((resolve) => {
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            ctx.save();
+
+            // Calculate position relative to the new canvas
+            // Layer positions are relative to center of original canvas, so we need to adjust
+            const cx = canvas.width / 2 + (layer.x || 0) + offsetX;
+            const cy = canvas.height / 2 + (layer.y || 0) + offsetY;
+            ctx.translate(cx, cy);
+            ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
+
+            // Apply flip transformations
+            if (layer.flipX || layer.flipY) {
+              ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+            }
+
+            const boxW = layer.width || DEFAULT_IMG_SIZE;
+            const boxH = layer.height || DEFAULT_IMG_SIZE;
+            const imgAR = img.width / img.height;
+            const boxAR = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
+            if (imgAR > boxAR) {
+              drawW = boxW;
+              drawH = boxW / imgAR;
+            } else {
+              drawH = boxH;
+              drawW = boxH * imgAR;
+            }
+            ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+            ctx.restore();
+            resolve(null);
+          };
+          img.src = layer.src || "";
+        });
+      }
     }
   };
 
@@ -285,45 +348,76 @@ export default function EditPageContent() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     for (const layer of layers) {
-      if (layer.type !== "image" || !layer.src) continue;
+      if (layer.type === "blank") continue;
+      if (layer.type === "image" && !layer.src) continue;
 
-      await new Promise((resolve) => {
-        const img = new window.Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          ctx.save();
+      if (layer.type === "text") {
+        // Draw text layer
+        ctx.save();
 
-          // Calculate position relative to the new canvas
-          // Layer positions are relative to center of original canvas, so we need to adjust
-          const cx = canvas.width / 2 + (layer.x || 0) + offsetX;
-          const cy = canvas.height / 2 + (layer.y || 0) + offsetY;
-          ctx.translate(cx, cy);
-          ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
+        // Calculate position relative to the new canvas
+        const cx = canvas.width / 2 + (layer.x || 0) + offsetX;
+        const cy = canvas.height / 2 + (layer.y || 0) + offsetY;
+        ctx.translate(cx, cy);
+        ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
 
-          // Apply flip transformations
-          if (layer.flipX || layer.flipY) {
-            ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
-          }
+        // Apply flip transformations
+        if (layer.flipX || layer.flipY) {
+          ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+        }
 
-          const boxW = layer.width || DEFAULT_IMG_SIZE;
-          const boxH = layer.height || DEFAULT_IMG_SIZE;
-          const imgAR = img.width / img.height;
-          const boxAR = boxW / boxH;
-          let drawW = boxW;
-          let drawH = boxH;
-          if (imgAR > boxAR) {
-            drawW = boxW;
-            drawH = boxW / imgAR;
-          } else {
-            drawH = boxH;
-            drawW = boxH * imgAR;
-          }
-          ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-          ctx.restore();
-          resolve(null);
-        };
-        img.src = layer.src || "";
-      });
+        // Draw text (no background or border)
+        ctx.fillStyle = layer.color || "#ffffff";
+        ctx.font = `${layer.fontSize || 24}px ${
+          layer.fontFamily || "Arial, sans-serif"
+        }`;
+        ctx.textAlign = layer.textAlign || "center";
+        ctx.textBaseline = "middle";
+
+        const text = layer.text || "Sample Text";
+        ctx.fillText(text, 0, 0);
+
+        ctx.restore();
+      } else {
+        // Draw image layer
+        await new Promise((resolve) => {
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            ctx.save();
+
+            // Calculate position relative to the new canvas
+            // Layer positions are relative to center of original canvas, so we need to adjust
+            const cx = canvas.width / 2 + (layer.x || 0) + offsetX;
+            const cy = canvas.height / 2 + (layer.y || 0) + offsetY;
+            ctx.translate(cx, cy);
+            ctx.rotate(((layer.rotation || 0) * Math.PI) / 180);
+
+            // Apply flip transformations
+            if (layer.flipX || layer.flipY) {
+              ctx.scale(layer.flipX ? -1 : 1, layer.flipY ? -1 : 1);
+            }
+
+            const boxW = layer.width || DEFAULT_IMG_SIZE;
+            const boxH = layer.height || DEFAULT_IMG_SIZE;
+            const imgAR = img.width / img.height;
+            const boxAR = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
+            if (imgAR > boxAR) {
+              drawW = boxW;
+              drawH = boxW / imgAR;
+            } else {
+              drawH = boxH;
+              drawW = boxH * imgAR;
+            }
+            ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+            ctx.restore();
+            resolve(null);
+          };
+          img.src = layer.src || "";
+        });
+      }
     }
   };
 
@@ -448,6 +542,40 @@ export default function EditPageContent() {
     setShowModal(true);
     setNewLayerImage(null);
   };
+
+  // Handler for adding text layer
+  const handleAddTextLayerClick = () => {
+    setFrameLayers((prev: Layer[][]) => {
+      const currentFrameLayers = prev[selectedFrameIdx] || [];
+      // Count existing text layers to determine the next number
+      const textLayerCount = currentFrameLayers.filter(
+        (layer) => layer.type === "text"
+      ).length;
+      const layerNumber = textLayerCount + 1;
+
+      const newLayer: Layer = {
+        id: `text-layer-${prev[selectedFrameIdx]?.length + 1 || 1}`,
+        name: `Text Layer ${layerNumber}`,
+        type: "text",
+        text: "Sample Text",
+        fontSize: 24,
+        fontFamily: "Arial, sans-serif",
+        color: "#ffffff",
+        textAlign: "center",
+        width: 200,
+        height: 50,
+        rotation: 0,
+        x: 0,
+        y: 0,
+      };
+      setSelectedLayerId(newLayer.id);
+      setFocusedElement("layer");
+      setShowTextProperties(true);
+      return prev.map((layers, idx) =>
+        idx === selectedFrameIdx ? [...layers, newLayer] : layers
+      );
+    });
+  };
   const handleModalClose = () => {
     setShowModal(false);
     setNewLayerImage(null);
@@ -543,8 +671,19 @@ export default function EditPageContent() {
 
   // Layer selection
   const handleSelectLayer = (id: string) => {
-    setSelectedLayerId(id);
-    setFocusedElement("layer");
+    const wasSelected = selectedLayerId === id;
+    const layer = frameLayers[selectedFrameIdx]?.find((l) => l.id === id);
+
+    if (wasSelected && layer?.type === "text") {
+      // Toggle text properties panel if clicking on already selected text layer
+      setShowTextProperties(!showTextProperties);
+    } else {
+      // Select the layer
+      setSelectedLayerId(id);
+      setFocusedElement("layer");
+      // Show text properties for text layers, hide for others
+      setShowTextProperties(layer?.type === "text");
+    }
   };
 
   // Frame selection
@@ -554,11 +693,49 @@ export default function EditPageContent() {
     // Clear layer selection when switching frames unless staying on same frame
     if (idx !== selectedFrameIdx) {
       setSelectedLayerId(null);
+      setShowTextProperties(false);
     }
   };
 
   // Image click handler (for canvas clicks)
   const handleImageClick = (layer: Layer) => {
+    const wasSelected = selectedLayerId === layer.id;
+
+    if (wasSelected && layer.type === "text") {
+      // Toggle text properties panel if clicking on already selected text layer
+      setShowTextProperties(!showTextProperties);
+    } else {
+      // Select the layer
+      setSelectedLayerId(layer.id);
+      setFocusedElement("layer");
+      // Show text properties for text layers, hide for others
+      setShowTextProperties(layer.type === "text");
+    }
+  };
+
+  // Layer update handler
+  const handleUpdateLayer = (layerId: string, updates: Partial<Layer>) => {
+    setFrameLayers((prev: Layer[][]) =>
+      prev.map((layers, idx) => {
+        if (idx !== selectedFrameIdx) return layers;
+        return layers.map((layer: Layer) => {
+          if (layer.id !== layerId) return layer;
+          return { ...layer, ...updates };
+        });
+      })
+    );
+  };
+
+  // Text double-click handler for quick text editing
+  const handleTextDoubleClick = (layer: Layer) => {
+    if (layer.type !== "text") return;
+
+    const newText = prompt("Edit text:", layer.text || "");
+    if (newText !== null) {
+      handleUpdateLayer(layer.id, { text: newText });
+    }
+
+    // Ensure the layer is selected and focused
     setSelectedLayerId(layer.id);
     setFocusedElement("layer");
   };
@@ -712,7 +889,7 @@ export default function EditPageContent() {
   const doExport = async (format: "png" | "gif") => {
     setExporting(true);
     const visibleLayers = frameLayers[selectedFrameIdx].filter(
-      (l) => l.type === "image" && l.src
+      (l) => (l.type === "image" && l.src) || l.type === "text"
     );
     if (visibleLayers.length === 0) return;
 
@@ -1040,6 +1217,7 @@ export default function EditPageContent() {
               const pastedLayer = { ...copiedLayer, id: newId };
               setSelectedLayerId(newId);
               setFocusedElement("layer"); // Set focus to layer when pasting
+              setShowTextProperties(pastedLayer.type === "text");
               return [...layers, pastedLayer];
             })
           );
@@ -1095,6 +1273,7 @@ export default function EditPageContent() {
                 };
                 setSelectedLayerId(blankLayer.id);
                 setFocusedElement("layer"); // Ensure focus stays on layer
+                setShowTextProperties(false);
                 return [blankLayer];
               }
 
@@ -1105,8 +1284,10 @@ export default function EditPageContent() {
               const newSelectedIndex = Math.max(0, deletedIndex - 1);
               const newSelectedId =
                 filteredLayers[newSelectedIndex]?.id || null;
+              const newSelectedLayer = filteredLayers[newSelectedIndex];
               setSelectedLayerId(newSelectedId);
               setFocusedElement("layer"); // Ensure focus stays on layer
+              setShowTextProperties(newSelectedLayer?.type === "text");
               return filteredLayers;
             });
           });
@@ -1180,14 +1361,18 @@ export default function EditPageContent() {
             onRotateMouseDown={handleRotateMouseDown}
             onFlipClick={handleFlipClick}
             onImageClick={handleImageClick}
+            onTextDoubleClick={handleTextDoubleClick}
           />
           {/* Right: Layers box, same height as canvas */}
           <LayerList
             layers={frameLayers[safeFrameIdx] || []}
             selectedLayerId={selectedLayerId}
+            showTextProperties={showTextProperties}
             onSelectLayer={handleSelectLayer}
             onAddLayerClick={handleAddLayerClick}
+            onAddTextLayerClick={handleAddTextLayerClick}
             onExportClick={handleExport}
+            onUpdateLayer={handleUpdateLayer}
             editorHeight={editorSize.height}
           />
         </div>

@@ -1,6 +1,6 @@
 import React, { RefObject } from "react";
 import Image from "next/image";
-import { Layer } from "./editTypes";
+import type { Layer } from "./editTypes";
 import { DEFAULT_IMG_SIZE } from "./editUtils";
 
 interface LayeredCanvasProps {
@@ -16,6 +16,7 @@ interface LayeredCanvasProps {
     direction: "horizontal" | "vertical"
   ) => void;
   onImageClick?: (layer: Layer) => void;
+  onTextDoubleClick?: (layer: Layer) => void;
 }
 
 const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
@@ -27,6 +28,7 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
   onRotateMouseDown,
   onFlipClick,
   onImageClick,
+  onTextDoubleClick,
 }) => {
   return (
     <div
@@ -37,10 +39,12 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
         <span className="text-gray-400">No image provided.</span>
       )}
       {layers.map((layer, idx) => {
-        if (layer.type !== "image" || !layer.src) return null;
+        if (layer.type === "blank") return null;
+        if (layer.type === "image" && !layer.src) return null;
         const isSelected = layer.id === selectedLayerId;
         const isDataUrl =
-          layer.src.startsWith("data:") || layer.src.startsWith("blob:");
+          layer.src &&
+          (layer.src.startsWith("data:") || layer.src.startsWith("blob:"));
         return (
           <div
             key={layer.id}
@@ -49,8 +53,17 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
               position: "absolute",
               left: `calc(50% + ${layer.x || 0}px)`,
               top: `calc(50% + ${layer.y || 0}px)`,
-              width: layer.width || DEFAULT_IMG_SIZE,
-              height: layer.height || DEFAULT_IMG_SIZE,
+              width:
+                layer.type === "text"
+                  ? "auto"
+                  : layer.width || DEFAULT_IMG_SIZE,
+              height:
+                layer.type === "text"
+                  ? "auto"
+                  : layer.height || DEFAULT_IMG_SIZE,
+              minWidth: layer.type === "text" ? "50px" : undefined,
+              minHeight: layer.type === "text" ? "20px" : undefined,
+              maxWidth: layer.type === "text" ? "400px" : undefined,
               transform: `translate(-50%, -50%) rotate(${
                 layer.rotation || 0
               }deg)`,
@@ -61,12 +74,38 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
               if (isSelected) {
                 onImageMouseDown(e, layer);
               } else {
-                // Select the layer when clicking on unselected image
+                // Select the layer when clicking on unselected layer
                 onImageClick?.(layer);
               }
             }}
+            onDoubleClick={(e) => {
+              if (layer.type === "text") {
+                e.stopPropagation();
+                onTextDoubleClick?.(layer);
+              }
+            }}
           >
-            {isDataUrl ? (
+            {layer.type === "text" ? (
+              <div
+                className="select-none"
+                style={{
+                  pointerEvents: "none",
+                  fontSize: layer.fontSize || 24,
+                  fontFamily: layer.fontFamily || "Arial, sans-serif",
+                  color: layer.color || "#ffffff",
+                  textAlign: layer.textAlign || "center",
+                  transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${
+                    layer.flipY ? -1 : 1
+                  })`,
+                  padding: "8px",
+                  wordWrap: "break-word",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: "1.2",
+                }}
+              >
+                {layer.text || "Sample Text"}
+              </div>
+            ) : layer.type === "image" && isDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={layer.src}
@@ -80,7 +119,7 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                   })`,
                 }}
               />
-            ) : (
+            ) : layer.type === "image" && layer.src ? (
               <Image
                 src={layer.src}
                 alt={layer.name}
@@ -95,7 +134,7 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                   })`,
                 }}
               />
-            )}
+            ) : null}
             {isSelected && (
               <>
                 {/* Dotted outline */}
