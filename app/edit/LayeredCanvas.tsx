@@ -90,8 +90,9 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                 className="select-none"
                 style={{
                   pointerEvents: "none",
-                  fontSize: layer.fontSize || 24,
-                  fontFamily: layer.fontFamily || "Arial, sans-serif",
+                  fontSize: layer.fontSize || 48,
+                  fontFamily: layer.fontFamily || "Impact, sans-serif",
+                  fontWeight: layer.fontWeight || "bold",
                   color: layer.color || "#ffffff",
                   textAlign: layer.textAlign || "center",
                   transform: `scaleX(${layer.flipX ? -1 : 1}) scaleY(${
@@ -101,9 +102,22 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                   wordWrap: "break-word",
                   whiteSpace: "pre-wrap",
                   lineHeight: "1.2",
+                  WebkitTextStroke:
+                    layer.strokeWidth && layer.strokeColor
+                      ? `${layer.strokeWidth}px ${layer.strokeColor}`
+                      : "3px #000000",
+                  textShadow:
+                    layer.strokeWidth && layer.strokeColor
+                      ? `
+                      -${layer.strokeWidth}px -${layer.strokeWidth}px 0 ${layer.strokeColor},
+                      ${layer.strokeWidth}px -${layer.strokeWidth}px 0 ${layer.strokeColor},
+                      -${layer.strokeWidth}px ${layer.strokeWidth}px 0 ${layer.strokeColor},
+                      ${layer.strokeWidth}px ${layer.strokeWidth}px 0 ${layer.strokeColor}
+                    `
+                      : "-3px -3px 0 #000000, 3px -3px 0 #000000, -3px 3px 0 #000000, 3px 3px 0 #000000",
                 }}
               >
-                {layer.text || "Sample Text"}
+                {layer.text || "MEME TEXT"}
               </div>
             ) : layer.type === "image" && isDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

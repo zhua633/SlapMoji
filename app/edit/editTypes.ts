@@ -14,7 +14,10 @@ export interface Layer {
   text?: string;
   fontSize?: number;
   fontFamily?: string;
+  fontWeight?: string;
   color?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
   textAlign?: "left" | "center" | "right";
 }
 

@@ -10,6 +10,7 @@ const TextEditPanel: React.FC<TextEditPanelProps> = ({ layer, onUpdate }) => {
   if (layer.type !== "text") return null;
 
   const fontFamilies = [
+    "Impact, sans-serif",
     "Arial, sans-serif",
     "Georgia, serif",
     "Times New Roman, serif",
@@ -17,10 +18,13 @@ const TextEditPanel: React.FC<TextEditPanelProps> = ({ layer, onUpdate }) => {
     "Helvetica, sans-serif",
     "Verdana, sans-serif",
     "Comic Sans MS, cursive",
-    "Impact, sans-serif",
     "Trebuchet MS, sans-serif",
     "Lucida Console, monospace",
   ];
+
+  const fontWeights = ["normal", "bold", "bolder", "lighter"];
+
+  const strokeWidths = [0, 1, 2, 3, 4, 5, 6, 8, 10];
 
   const fontSizes = [
     12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 84, 96,
@@ -61,7 +65,7 @@ const TextEditPanel: React.FC<TextEditPanelProps> = ({ layer, onUpdate }) => {
           Font Family
         </label>
         <select
-          value={layer.fontFamily || "Arial, sans-serif"}
+          value={layer.fontFamily || "Impact, sans-serif"}
           onChange={(e) => onUpdate({ fontFamily: e.target.value })}
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
         >
@@ -80,7 +84,7 @@ const TextEditPanel: React.FC<TextEditPanelProps> = ({ layer, onUpdate }) => {
             Size
           </label>
           <select
-            value={layer.fontSize || 24}
+            value={layer.fontSize || 48}
             onChange={(e) => onUpdate({ fontSize: parseInt(e.target.value) })}
             className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
           >
@@ -109,6 +113,67 @@ const TextEditPanel: React.FC<TextEditPanelProps> = ({ layer, onUpdate }) => {
               onChange={(e) => onUpdate({ color: e.target.value })}
               className="flex-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs"
               placeholder="#ffffff"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Font Weight */}
+      <div className="space-y-2">
+        <label className="block text-xs font-medium text-gray-300">
+          Font Weight
+        </label>
+        <select
+          value={layer.fontWeight || "bold"}
+          onChange={(e) => onUpdate({ fontWeight: e.target.value })}
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+        >
+          {fontWeights.map((weight) => (
+            <option key={weight} value={weight}>
+              {weight.charAt(0).toUpperCase() + weight.slice(1)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Stroke Controls */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-300">
+            Stroke Width
+          </label>
+          <select
+            value={layer.strokeWidth || 3}
+            onChange={(e) =>
+              onUpdate({ strokeWidth: parseInt(e.target.value) })
+            }
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+          >
+            {strokeWidths.map((width) => (
+              <option key={width} value={width}>
+                {width}px
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-300">
+            Stroke Color
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={layer.strokeColor || "#000000"}
+              onChange={(e) => onUpdate({ strokeColor: e.target.value })}
+              className="w-8 h-8 rounded cursor-pointer bg-gray-800 border border-gray-600"
+            />
+            <input
+              type="text"
+              value={layer.strokeColor || "#000000"}
+              onChange={(e) => onUpdate({ strokeColor: e.target.value })}
+              className="flex-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs"
+              placeholder="#000000"
             />
           </div>
         </div>
