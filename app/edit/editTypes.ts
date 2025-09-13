@@ -1,7 +1,7 @@
 export interface Layer {
   id: string;
   name: string;
-  type: "image" | "blank";
+  type: "image" | "blank" | "text";
   src?: string;
   width?: number;
   height?: number;
@@ -10,6 +10,12 @@ export interface Layer {
   y?: number;
   flipX?: boolean;
   flipY?: boolean;
+  // Text-specific properties
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  color?: string;
+  textAlign?: "left" | "center" | "right";
 }
 
 export type GifFrame = {
