@@ -1,38 +1,38 @@
 # SlapMoji
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Monorepo: **Next.js** frontend in [`web/`](web/) and **Spring Boot** API in [`backend/`](backend/).
 
 ## Getting Started
 
-First, run the development server:
+From the repo root, install and run the web app (requires [pnpm](https://pnpm.io)):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The UI lives under `web/app/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run the API locally (Java 17+):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd backend && ./mvnw spring-boot:run
+```
 
-## Learn More
+Health check: [http://localhost:8080/api/health](http://localhost:8080/api/health).
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Vercel (frontend)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+In the Vercel project, set **Root Directory** to `web` (Settings → General). The lockfile lives at the repo root for the pnpm workspace, so [`web/vercel.json`](web/vercel.json) uses `installCommand` to run `pnpm install` from the monorepo root. Connect the same Git repo as today.
 
-## Deploy on Vercel
+Set **`NEXT_PUBLIC_API_URL`** to your Railway public URL (no trailing slash), e.g. `https://your-service.up.railway.app`, when the UI calls the API.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Railway (API)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Create a service from this repo and set **Root Directory** to `backend`. Railway’s Nixpacks builder runs Maven and starts the executable JAR.
+
+Set **`SLAPMOJI_CORS_ORIGINS`** to your Vercel origin (comma-separated if you have several), e.g. `https://your-app.vercel.app`, so browser requests from the deployed site are allowed.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to load [Geist](https://vercel.com/font).

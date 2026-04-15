@@ -1,32 +1,10 @@
 {
   "name": "slapmoji",
-  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --turbopack",
-    "lint": "next lint",
-    "serve": "next build && next start",
-    "start": "next start"
+    "dev": "pnpm --dir web dev",
+    "build": "pnpm --dir web build",
+    "lint": "pnpm --dir web lint"
   },
-  "dependencies": {
-    "@hello-pangea/dnd": "^18.0.1",
-    "gif.js": "^0.2.0",
-    "gifuct-js": "^2.1.2",
-    "next": "15.3.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/gif.js": "^0.2.5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+  "packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531"
 }
