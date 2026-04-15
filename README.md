@@ -4,11 +4,11 @@ Monorepo: **Next.js** frontend in [`web/`](web/) and **Spring Boot** API in [`ba
 
 ## Getting Started
 
-From the repo root, install and run the web app (requires [pnpm](https://pnpm.io)):
+Install and run the web app (requires [pnpm](https://pnpm.io)). Dependencies and `pnpm-lock.yaml` live only under `web/` so Vercel can use **Root Directory → `web`** without a workspace install.
 
 ```bash
-pnpm install
-pnpm dev
+cd web && pnpm install
+pnpm dev   # from repo root (runs web dev)
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The UI lives under `web/app/`.
@@ -25,9 +25,11 @@ Health check: [http://localhost:8080/api/health](http://localhost:8080/api/healt
 
 ### Vercel (frontend)
 
-In the Vercel project, set **Root Directory** to `web` (Settings → General). The lockfile lives at the repo root for the pnpm workspace, so [`web/vercel.json`](web/vercel.json) uses `installCommand` to run `pnpm install` from the monorepo root. Connect the same Git repo as today.
+In the Vercel project, set **Root Directory** to **`web`** (Settings → General). Use the folder name only—**not** `/web`. Under **Framework Preset**, use **Next.js** or **Auto**.
 
-Set **`NEXT_PUBLIC_API_URL`** to your Railway public URL (no trailing slash), e.g. `https://your-service.up.railway.app`, when the UI calls the API.
+[`web/pnpm-lock.yaml`](web/pnpm-lock.yaml) must be committed next to [`web/package.json`](web/package.json). [`web/vercel.json`](web/vercel.json) only sets the Next preset; the default `pnpm install` runs inside `web`.
+
+**`NEXT_PUBLIC_API_URL`:** [`web/next.config.ts`](web/next.config.ts) defaults to `https://slapmoji-production.up.railway.app`. Override in Vercel → Environment Variables if needed (no trailing slash). See [`web/.env.example`](web/.env.example).
 
 ### Railway (API)
 

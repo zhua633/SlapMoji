@@ -6,9 +6,7 @@ settings:
 
 importers:
 
-  .: {}
-
-  web:
+  .:
     dependencies:
       '@hello-pangea/dnd':
         specifier: ^18.0.1
