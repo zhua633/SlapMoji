@@ -23,6 +23,10 @@ import {
   createBlankFrame,
 } from "./editUtils";
 import { DropResult, DragDropContext } from "@hello-pangea/dnd";
+import type { User } from "@supabase/supabase-js";
+import SiteHeader from "../components/SiteHeader";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { saveTemplateToSupabase } from "./saveTemplate";
 
 export default function EditPageContent() {
   const searchParams = useSearchParams();
@@ -60,6 +64,13 @@ export default function EditPageContent() {
   // Export dialog state
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [saveTemplateLoading, setSaveTemplateLoading] = useState(false);
+  const [saveBanner, setSaveBanner] = useState<{
+    kind: "ok" | "err";
+    message: string;
+  } | null>(null);
 
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [editorSize, setEditorSize] = useState({ width: 600, height: 600 });
@@ -564,6 +575,23 @@ export default function EditPageContent() {
     extractFrames();
   }, [imgUrl, imgType, imgName]);
 
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase) return;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    void supabase.auth.getUser().then(({ data: { user: u } }) => {
+      setUser(u);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Handlers for modal
   const handleAddLayerClick = () => {
     setShowModal(true);
@@ -916,6 +944,50 @@ export default function EditPageContent() {
   const handleExport = () => {
     setShowExportDialog(true);
   };
+
+  const handleSaveTemplate = useCallback(async () => {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || !user || frames.length === 0) return;
+
+    setSaveTemplateLoading(true);
+    setSaveBanner(null);
+
+    let title = "Untitled template";
+    try {
+      if (imgName) {
+        const decoded = decodeURIComponent(imgName);
+        title = decoded.replace(/\.[^/.]+$/, "") || title;
+      }
+    } catch {
+      if (imgName) title = imgName.replace(/\.[^/.]+$/, "") || title;
+    }
+
+    const { error } = await saveTemplateToSupabase(supabase, user.id, {
+      title,
+      canvasWidth: editorSize.width,
+      canvasHeight: editorSize.height,
+      frames,
+      frameLayers,
+    });
+
+    setSaveTemplateLoading(false);
+
+    if (error) {
+      setSaveBanner({ kind: "err", message: error.message });
+      return;
+    }
+
+    setSaveBanner({ kind: "ok", message: "Template saved. Open Templates to see it." });
+    window.setTimeout(() => setSaveBanner(null), 5000);
+  }, [
+    user,
+    imgName,
+    editorSize.width,
+    editorSize.height,
+    frames,
+    frameLayers,
+  ]);
+
   const doExport = async (format: "png" | "gif") => {
     setExporting(true);
     const visibleLayers = frameLayers[selectedFrameIdx].filter(
@@ -1344,10 +1416,13 @@ export default function EditPageContent() {
   // Show loading screen while validating image
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading image...</p>
+      <div className="min-h-screen flex flex-col bg-black text-white">
+        <SiteHeader variant="edit" />
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p>Loading image...</p>
+          </div>
         </div>
       </div>
     );
@@ -1356,10 +1431,13 @@ export default function EditPageContent() {
   // Don't render DragDropContext on server side
   if (!isMounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading editor...</p>
+      <div className="min-h-screen flex flex-col bg-black text-white">
+        <SiteHeader variant="edit" />
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p>Loading editor...</p>
+          </div>
         </div>
       </div>
     );
@@ -1367,68 +1445,85 @@ export default function EditPageContent() {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div
-        className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-8"
-        onClick={(e) => {
-          // Clear focus when clicking on empty areas
-          if (e.target === e.currentTarget) {
-            setFocusedElement(null);
-            setSelectedLayerId(null);
-          }
-        }}
-      >
+      <div className="min-h-screen flex flex-col bg-black text-white">
+        <SiteHeader variant="edit" />
+        {saveBanner && (
+          <div
+            className={`shrink-0 px-4 py-2 text-center text-sm ${
+              saveBanner.kind === "ok"
+                ? "bg-emerald-900/50 text-emerald-200"
+                : "bg-red-900/40 text-red-200"
+            }`}
+            role="status"
+          >
+            {saveBanner.message}
+          </div>
+        )}
         <div
-          className="flex w-full max-w-5xl overflow-hidden gap-6"
-          style={{ height: editorSize.height }}
+          className="flex-1 flex flex-col items-center justify-center p-8 min-h-0 overflow-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setFocusedElement(null);
+              setSelectedLayerId(null);
+            }
+          }}
         >
-          {/* Left: Superimposed Images */}
-          <LayeredCanvas
-            layers={displayLayers || []}
-            selectedLayerId={selectedLayerId}
-            editorRef={editorRef}
-            onImageMouseDown={handleImageMouseDown}
-            onResizeMouseDown={handleResizeMouseDown}
-            onRotateMouseDown={handleRotateMouseDown}
-            onFlipClick={handleFlipClick}
-            onImageClick={handleImageClick}
-            onTextDoubleClick={handleTextDoubleClick}
+          <div
+            className="flex w-full max-w-5xl overflow-hidden gap-6"
+            style={{ height: editorSize.height }}
+          >
+            {/* Left: Superimposed Images */}
+            <LayeredCanvas
+              layers={displayLayers || []}
+              selectedLayerId={selectedLayerId}
+              editorRef={editorRef}
+              onImageMouseDown={handleImageMouseDown}
+              onResizeMouseDown={handleResizeMouseDown}
+              onRotateMouseDown={handleRotateMouseDown}
+              onFlipClick={handleFlipClick}
+              onImageClick={handleImageClick}
+              onTextDoubleClick={handleTextDoubleClick}
+            />
+            {/* Right: Layers box, same height as canvas */}
+            <LayerList
+              layers={frameLayers[safeFrameIdx] || []}
+              selectedLayerId={selectedLayerId}
+              showTextProperties={showTextProperties}
+              onSelectLayer={handleSelectLayer}
+              onAddLayerClick={handleAddLayerClick}
+              onAddTextLayerClick={handleAddTextLayerClick}
+              onExportClick={handleExport}
+              onSaveTemplateClick={() => void handleSaveTemplate()}
+              saveTemplateLoading={saveTemplateLoading}
+              showSaveTemplate={Boolean(user)}
+              onUpdateLayer={handleUpdateLayer}
+              editorHeight={editorSize.height}
+            />
+          </div>
+          {/* Frame row at the bottom */}
+          <FrameStrip
+            frames={frames}
+            selectedFrameIdx={selectedFrameIdx}
+            onSelectFrame={handleSelectFrame}
+            onAddFrame={handleAddFrame}
+            customPreviews={liveFramePreviews}
           />
-          {/* Right: Layers box, same height as canvas */}
-          <LayerList
-            layers={frameLayers[safeFrameIdx] || []}
-            selectedLayerId={selectedLayerId}
-            showTextProperties={showTextProperties}
-            onSelectLayer={handleSelectLayer}
-            onAddLayerClick={handleAddLayerClick}
-            onAddTextLayerClick={handleAddTextLayerClick}
-            onExportClick={handleExport}
-            onUpdateLayer={handleUpdateLayer}
-            editorHeight={editorSize.height}
+          {/* Export format dialog */}
+          <ExportDialog
+            show={showExportDialog}
+            exporting={exporting}
+            onExport={doExport}
+            onClose={() => setShowExportDialog(false)}
+          />
+          {/* Modal Dialog for Adding Layer */}
+          <AddLayerModal
+            show={showModal}
+            newLayerImage={newLayerImage}
+            onFileSelected={setNewLayerImage}
+            onCreateLayer={handleCreateLayer}
+            onClose={handleModalClose}
           />
         </div>
-        {/* Frame row at the bottom */}
-        <FrameStrip
-          frames={frames}
-          selectedFrameIdx={selectedFrameIdx}
-          onSelectFrame={handleSelectFrame}
-          onAddFrame={handleAddFrame}
-          customPreviews={liveFramePreviews}
-        />
-        {/* Export format dialog */}
-        <ExportDialog
-          show={showExportDialog}
-          exporting={exporting}
-          onExport={doExport}
-          onClose={() => setShowExportDialog(false)}
-        />
-        {/* Modal Dialog for Adding Layer */}
-        <AddLayerModal
-          show={showModal}
-          newLayerImage={newLayerImage}
-          onFileSelected={setNewLayerImage}
-          onCreateLayer={handleCreateLayer}
-          onClose={handleModalClose}
-        />
       </div>
     </DragDropContext>
   );

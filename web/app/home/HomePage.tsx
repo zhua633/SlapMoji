@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import SiteHeader from "../components/SiteHeader";
 import UploadArea from "../components/UploadArea";
 
 export default function HomePage() {
@@ -20,16 +20,9 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-black text-white p-4">
-      <header className="shrink-0 mb-4">
-        <Link
-          href="/templates"
-          className="text-sm text-white/70 hover:text-white transition-colors"
-        >
-          Templates
-        </Link>
-      </header>
-      <div className="flex-1 flex items-center justify-center min-h-0">
+    <div className="min-h-screen flex flex-col bg-black text-white">
+      <SiteHeader variant="home" />
+      <div className="flex-1 flex items-center justify-center min-h-0 px-4 pb-8 pt-4">
         <UploadArea
           onFileSelected={setSelectedFile}
           value={selectedFile}

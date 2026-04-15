@@ -11,6 +11,9 @@ interface LayerListProps {
   onAddLayerClick: () => void;
   onAddTextLayerClick: () => void;
   onExportClick: () => void;
+  onSaveTemplateClick?: () => void;
+  saveTemplateLoading?: boolean;
+  showSaveTemplate?: boolean;
   onUpdateLayer: (layerId: string, updates: Partial<Layer>) => void;
   editorHeight: number;
 }
@@ -23,6 +26,9 @@ const LayerList: React.FC<LayerListProps> = ({
   onAddLayerClick,
   onAddTextLayerClick,
   onExportClick,
+  onSaveTemplateClick,
+  saveTemplateLoading = false,
+  showSaveTemplate = false,
   onUpdateLayer,
   editorHeight,
 }) => {
@@ -82,6 +88,46 @@ const LayerList: React.FC<LayerListProps> = ({
                 />
               </svg>
             </button>
+            {showSaveTemplate && onSaveTemplateClick && (
+              <button
+                type="button"
+                onClick={onSaveTemplateClick}
+                disabled={saveTemplateLoading}
+                aria-label="Save as template"
+                title="Save as template"
+                className="flex items-center justify-center gap-1.5 px-2.5 py-2 min-w-[2.5rem] bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 text-xs font-semibold"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
+                >
+                  <path
+                    d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M7 13h10M7 17h6M7 9h2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M14 3v4h4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            )}
             <button
               onClick={onExportClick}
               className="w-[70px] min-w-[70px] px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-semibold text-center"

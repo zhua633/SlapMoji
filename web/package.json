@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.1",
     "gif.js": "^0.2.0",
     "gifuct-js": "^2.1.2",
     "next": "15.3.8",
