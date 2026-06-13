@@ -10,7 +10,7 @@ interface UploadAreaProps {
   hidePreview?: boolean;
   buttonLabel?: string;
   fileTypes?: string[]; // Array of allowed MIME types
-  height?: string; // Custom height for different contexts
+  height?: string; // Minimum height for the drop zone; grows with preview content
   maxFileSize?: number; // Maximum file size in bytes
 }
 
@@ -140,12 +140,14 @@ const UploadArea: React.FC<UploadAreaProps> = ({
 
   return (
     <div
-      className={`w-full max-w-2xl flex flex-col items-center justify-center border-4 border-dotted rounded-xl transition-colors duration-200 p-4 sm:p-6 md:p-8 ${
+      className={`w-full max-w-2xl flex flex-col items-center border-4 border-dotted rounded-xl transition-colors duration-200 p-4 sm:p-6 md:p-8 ${
+        file && !error ? "justify-start py-6 sm:py-8" : "justify-center"
+      } ${
         dragActive
           ? "border-blue-400 bg-black/60"
           : "border-gray-600 bg-black/80"
       }`}
-      style={{ height }}
+      style={{ minHeight: height }}
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}

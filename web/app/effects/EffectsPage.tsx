@@ -1,108 +1,137 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import SiteHeader from "../components/SiteHeader";
 import UploadArea from "../components/UploadArea";
+import EffectResultCell, { type EffectResultState } from "./EffectResultCell";
+import { EFFECTS } from "./effectsConfig";
+
+function idleResults(): Record<string, EffectResultState> {
+  return Object.fromEntries(EFFECTS.map((e) => [e.id, { status: "idle" }]));
+}
+
+async function runEffect(
+  effectId: string,
+  file: File
+): Promise<EffectResultState> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch(`/api/effects/${effectId}`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      return {
+        status: "error",
+        message: data?.error ?? `Request failed (${res.status})`,
+      };
+    }
+
+    const blob = await res.blob();
+    return { status: "success", url: URL.createObjectURL(blob) };
+  } catch {
+    return { status: "error", message: "Network error." };
+  }
+}
 
 export default function EffectsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [results, setResults] =
+    useState<Record<string, EffectResultState>>(idleResults);
+  const [running, setRunning] = useState(false);
+
+  const revokeUrls = useCallback((state: Record<string, EffectResultState>) => {
+    for (const result of Object.values(state)) {
+      if (result.status === "success") {
+        URL.revokeObjectURL(result.url);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    return () => {
-      if (resultUrl) URL.revokeObjectURL(resultUrl);
-    };
-  }, [resultUrl]);
+    return () => revokeUrls(results);
+  }, [results, revokeUrls]);
+
+  const handleFileSelected = (file: File | null) => {
+    setSelectedFile(file);
+    setResults((prev) => {
+      revokeUrls(prev);
+      return idleResults();
+    });
+  };
 
   const handleConfirm = async () => {
     if (!selectedFile) return;
 
-    setLoading(true);
-    setError(null);
-    if (resultUrl) {
-      URL.revokeObjectURL(resultUrl);
-      setResultUrl(null);
-    }
+    setRunning(true);
+    setResults((prev) => {
+      revokeUrls(prev);
+      return Object.fromEntries(
+        EFFECTS.map((e) => [e.id, { status: "loading" }])
+      );
+    });
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
+    const settled = await Promise.all(
+      EFFECTS.map(async (effect) => {
+        const result = await runEffect(effect.id, selectedFile);
+        return [effect.id, result] as const;
+      })
+    );
 
-    try {
-      const res = await fetch("/api/effects/zoom", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setError(data?.error ?? `Request failed (${res.status})`);
-        return;
-      }
-
-      const blob = await res.blob();
-      setResultUrl(URL.createObjectURL(blob));
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setResults(Object.fromEntries(settled));
+    setRunning(false);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-white">
       <SiteHeader variant="effects" />
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 pb-8 pt-4 gap-8">
-        <div className="text-center max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight mb-2">Effects</h1>
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold tracking-tight mb-2">
+            Effects
+          </h1>
           <p className="text-white/60 text-sm">
-            Upload an image to apply the zoom effect.
+            Upload an image once — all effects run in parallel.
           </p>
         </div>
 
-        <UploadArea
-          onFileSelected={setSelectedFile}
-          value={selectedFile}
-          showConfirm={true}
-          onConfirm={() => void handleConfirm()}
-          height="min(500px, 80vh)"
-          fileTypes={["image/gif", "image/png", "image/jpeg", "image/jpg"]}
-          maxFileSize={10 * 1024 * 1024}
-        />
+        <div className="flex justify-center">
+          <UploadArea
+            onFileSelected={handleFileSelected}
+            value={selectedFile}
+            showConfirm={true}
+            onConfirm={() => void handleConfirm()}
+            height="min(360px, 60vh)"
+            fileTypes={["image/gif", "image/png", "image/jpeg", "image/jpg"]}
+            maxFileSize={10 * 1024 * 1024}
+          />
+        </div>
 
-        {loading && (
-          <p className="text-white/70 text-sm animate-pulse">Applying zoom effect…</p>
+        {running && (
+          <p className="text-white/70 text-sm text-center animate-pulse">
+            Applying effects…
+          </p>
         )}
 
-        {error && (
-          <p className="text-red-400 text-sm text-center max-w-md">{error}</p>
-        )}
-
-        {resultUrl && !loading && (
-          <div className="flex flex-col items-center gap-4 w-full max-w-2xl">
-            <h2 className="text-lg font-medium text-white/90">Result</h2>
-            <Image
-              src={resultUrl}
-              alt="Zoom effect result"
-              width={500}
-              height={500}
-              className="max-w-full rounded-lg shadow-lg object-contain"
-              unoptimized
+        <section
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4"
+          aria-label="Effect results"
+        >
+          {EFFECTS.map((effect) => (
+            <EffectResultCell
+              key={effect.id}
+              effect={effect}
+              result={results[effect.id] ?? { status: "idle" }}
             />
-            <a
-              href={resultUrl}
-              download="zoom.gif"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm"
-            >
-              Download zoom.gif
-            </a>
-          </div>
-        )}
-      </div>
+          ))}
+        </section>
+      </main>
     </div>
   );
 }

@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 const defaultApiUrl = "https://slapmoji-backend.onrender.com";
 
-export async function POST(request: NextRequest) {
+type RouteContext = {
+  params: Promise<{ effect: string }>;
+};
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  const { effect } = await context.params;
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? defaultApiUrl;
   const apiKey =
     process.env.SLAPMOJI_API_KEY ?? process.env.SLAPMOJI_DEV_API_KEY;
@@ -23,13 +28,16 @@ export async function POST(request: NextRequest) {
   const backendForm = new FormData();
   backendForm.append("file", file, file instanceof File ? file.name : "image");
 
-  const res = await fetch(`${apiUrl.replace(/\/$/, "")}/api/v1/effects/zoom`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: backendForm,
-  });
+  const res = await fetch(
+    `${apiUrl.replace(/\/$/, "")}/api/v1/effects/${encodeURIComponent(effect)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: backendForm,
+    }
+  );
 
   if (!res.ok) {
     const text = await res.text();
