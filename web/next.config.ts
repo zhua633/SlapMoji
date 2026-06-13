@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const defaultApiUrl = "https://slapmoji-production.up.railway.app";
+const defaultApiUrl = "https://slapmoji-backend.onrender.com";
 
 const nextConfig: NextConfig = {
   env: {

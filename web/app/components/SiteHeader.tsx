@@ -9,7 +9,7 @@ const linkClass =
   "text-sm text-white/70 hover:text-white transition-colors px-2 py-2 rounded-md hover:bg-white/5";
 
 type SiteHeaderProps = {
-  variant: "home" | "templates" | "login" | "edit";
+  variant: "home" | "templates" | "login" | "edit" | "effects";
 };
 
 export default function SiteHeader({ variant }: SiteHeaderProps) {
@@ -62,22 +62,19 @@ export default function SiteHeader({ variant }: SiteHeaderProps) {
             </button>
           </>
         )}
-        {variant === "templates" ? (
+        {variant !== "home" && (
           <Link href="/" className={linkClass}>
             Home
           </Link>
-        ) : variant === "login" || variant === "edit" ? (
-          <>
-            <Link href="/" className={linkClass}>
-              Home
-            </Link>
-            <Link href="/templates" className={linkClass}>
-              Templates
-            </Link>
-          </>
-        ) : (
+        )}
+        {variant !== "templates" && (
           <Link href="/templates" className={linkClass}>
             Templates
+          </Link>
+        )}
+        {variant !== "effects" && (
+          <Link href="/effects" className={linkClass}>
+            Effects
           </Link>
         )}
       </nav>
