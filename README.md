@@ -8,15 +8,24 @@ Make a GIF for your Slack emoji/Discord emote!
 
 [Full editor walkthrough (MP4)](docs/assets/slapmoji-demo.mp4)
 
+### Final result
+
+<p align="center">
+  <img src="docs/assets/slapmoji-final-result.gif" alt="SlapMoji final result — layered GIF ready for Slack or Discord" width="280" />
+</p>
+
+<p align="center"><em>Layered frames exported as a GIF — drop it straight into Slack or Discord.</em></p>
+
 ### Effects
 
 ![SlapMoji effects demo](docs/assets/slapmoji-effects.gif)
 
 [Full effects walkthrough (MP4)](docs/assets/slapmoji-effects.mp4)
 
-### Final result
 
-![SlapMoji final result](docs/assets/slapmoji-final-result.gif)
+| Frame 1 | Frame 2 |
+| :---: | :---: |
+| ![Wiggle effect frame 1](docs/assets/slapmoji-wiggle.gif) | ![Wiggle effect frame 2](docs/assets/slapmoji-wiggle.gif) |
 
 Monorepo: **Next.js** frontend in [`web/`](web/) and **Spring Boot** API in [`backend/`](backend/).
 

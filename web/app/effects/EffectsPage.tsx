@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import SiteHeader from "../components/SiteHeader";
 import UploadArea from "../components/UploadArea";
 import EffectResultCell, { type EffectResultState } from "./EffectResultCell";
@@ -54,9 +54,12 @@ export default function EffectsPage() {
     }
   }, []);
 
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
+
   useEffect(() => {
-    return () => revokeUrls(results);
-  }, [results, revokeUrls]);
+    return () => revokeUrls(resultsRef.current);
+  }, [revokeUrls]);
 
   const handleFileSelected = (file: File | null) => {
     setSelectedFile(file);
