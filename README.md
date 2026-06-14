@@ -2,13 +2,19 @@
 
 Make a GIF for your Slack emoji/Discord emote!
 
-![SlapMoji demo](docs/assets/slapmoji-demo.gif)
+### Editor
 
-<video src="docs/assets/slapmoji-demo.mp4" controls width="960">
-  <a href="docs/assets/slapmoji-demo.mp4">Download the demo video</a>
-</video>
+![SlapMoji editor demo](docs/assets/slapmoji-demo.gif)
 
-**Final result**
+[Full editor walkthrough (MP4)](docs/assets/slapmoji-demo.mp4)
+
+### Effects
+
+![SlapMoji effects demo](docs/assets/slapmoji-effects.gif)
+
+[Full effects walkthrough (MP4)](docs/assets/slapmoji-effects.mp4)
+
+### Final result
 
 ![SlapMoji final result](docs/assets/slapmoji-final-result.gif)
 
