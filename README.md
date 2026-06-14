@@ -1,5 +1,17 @@
 # SlapMoji
 
+Make a GIF for your Slack emoji/Discord emote!
+
+![SlapMoji demo](docs/assets/slapmoji-demo.gif)
+
+<video src="docs/assets/slapmoji-demo.mp4" controls width="960">
+  <a href="docs/assets/slapmoji-demo.mp4">Download the demo video</a>
+</video>
+
+**Final result**
+
+![SlapMoji final result](docs/assets/slapmoji-final-result.gif)
+
 Monorepo: **Next.js** frontend in [`web/`](web/) and **Spring Boot** API in [`backend/`](backend/).
 
 ## Getting Started
