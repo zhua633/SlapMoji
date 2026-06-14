@@ -19,8 +19,16 @@ const FrameStrip: React.FC<FrameStripProps> = ({
   onAddFrame,
   customPreviews = [],
 }) => (
-  <div className="w-full max-w-5xl mt-4">
-    <div className="flex items-center overflow-x-auto gap-3 pb-2">
+  <div className="w-full max-w-5xl mt-6">
+    <p className="text-[11px] uppercase tracking-[0.15em] text-white/35 mb-3">
+      Frames
+      {frames.length > 1 && (
+        <span className="normal-case tracking-normal text-white/25 ml-2">
+          · drag to reorder
+        </span>
+      )}
+    </p>
+    <div className="flex items-center overflow-x-auto gap-2.5 pb-2">
       <Droppable
         droppableId="frames-droppable"
         direction="horizontal"
@@ -32,7 +40,7 @@ const FrameStrip: React.FC<FrameStripProps> = ({
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className="flex items-center gap-3"
+            className="flex items-center gap-2.5"
           >
             {frames.map((f, idx) => (
               <Draggable key={f.id} draggableId={f.id} index={idx}>
@@ -41,13 +49,12 @@ const FrameStrip: React.FC<FrameStripProps> = ({
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
-                    className={`w-20 h-20 rounded border-2 flex-shrink-0 cursor-pointer overflow-hidden transition-shadow ${
+                    className={`relative w-[72px] h-[72px] rounded-lg border flex-shrink-0 cursor-pointer overflow-hidden transition-all ${
                       selectedFrameIdx === idx
-                        ? "border-blue-500"
-                        : "border-gray-600"
-                    } ${snapshot.isDragging ? "shadow-lg" : ""}`}
+                        ? "border-white/50 ring-1 ring-white/20"
+                        : "border-white/10 hover:border-white/25"
+                    } ${snapshot.isDragging ? "opacity-80 scale-105" : ""}`}
                     onClick={() => {
-                      // Only handle click if not dragging
                       if (!snapshot.isDragging) {
                         onSelectFrame(idx);
                       }
@@ -56,12 +63,15 @@ const FrameStrip: React.FC<FrameStripProps> = ({
                     <Image
                       src={customPreviews[idx] || f.preview}
                       alt={`Frame ${idx + 1}`}
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-contain"
+                      width={72}
+                      height={72}
+                      className="w-full h-full object-contain bg-white/[0.03]"
                       draggable={false}
                       style={{ pointerEvents: "none" }}
                     />
+                    <span className="absolute bottom-1 right-1.5 text-[9px] font-mono text-white/40">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
                   </div>
                 )}
               </Draggable>

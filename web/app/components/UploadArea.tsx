@@ -2,6 +2,50 @@
 import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 
+const EXTENSION_MIME: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+};
+
+function normalizeMime(mime: string): string {
+  if (mime === "image/pjpeg" || mime === "image/jpg") return "image/jpeg";
+  return mime;
+}
+
+/** Resolve MIME type from file.type or extension; returns null if not allowed. */
+export function resolveImageMimeType(
+  file: File,
+  allowedTypes: string[]
+): string | null {
+  const allowed = new Set(allowedTypes.map(normalizeMime));
+  if (allowedTypes.includes("image/jpg")) allowed.add("image/jpeg");
+  if (allowedTypes.includes("image/jpeg")) allowed.add("image/jpeg");
+
+  if (file.type) {
+    const mime = normalizeMime(file.type);
+    if (allowed.has(mime)) return mime;
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext) {
+    const fromExt = EXTENSION_MIME[ext];
+    if (fromExt && allowed.has(fromExt)) return fromExt;
+  }
+
+  return null;
+}
+
+function acceptAttribute(fileTypes: string[]): string {
+  const parts = new Set<string>(fileTypes);
+  for (const t of fileTypes) {
+    const ext = t.replace("image/", ".");
+    if (ext.startsWith(".")) parts.add(ext);
+  }
+  return [...parts].join(",");
+}
+
 interface UploadAreaProps {
   onFileSelected?: (file: File | null) => void;
   value?: File | null;
@@ -9,9 +53,10 @@ interface UploadAreaProps {
   onConfirm?: () => void;
   hidePreview?: boolean;
   buttonLabel?: string;
-  fileTypes?: string[]; // Array of allowed MIME types
-  height?: string; // Minimum height for the drop zone; grows with preview content
-  maxFileSize?: number; // Maximum file size in bytes
+  confirmLabel?: string;
+  fileTypes?: string[];
+  height?: string;
+  maxFileSize?: number;
 }
 
 const UploadArea: React.FC<UploadAreaProps> = ({
@@ -20,7 +65,8 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   showConfirm = false,
   onConfirm,
   hidePreview = false,
-  buttonLabel = "Upload Image",
+  buttonLabel = "Choose file",
+  confirmLabel = "Continue",
   fileTypes = [
     "image/png",
     "image/jpeg",
@@ -30,7 +76,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
     "image/svg+xml",
     "image/bmp",
   ],
-  height = "500px",
+  height = "auto",
   maxFileSize,
 }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -39,16 +85,12 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Use controlled or uncontrolled file state
   const file = value !== undefined ? value : internalFile;
 
-  // Create preview URL when file changes, only on client side
   useEffect(() => {
     if (file && typeof window !== "undefined") {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-
-      // Cleanup function to revoke the URL
       return () => {
         URL.revokeObjectURL(url);
       };
@@ -66,7 +108,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   };
 
   const isValidImage = (file: File) => {
-    return file.type.startsWith("image/") && fileTypes.includes(file.type);
+    return resolveImageMimeType(file, fileTypes) !== null;
   };
 
   const isValidFileSize = (file: File) => {
@@ -75,7 +117,6 @@ const UploadArea: React.FC<UploadAreaProps> = ({
   };
 
   const handleFile = (file: File) => {
-    // Check file type first
     if (!isValidImage(file)) {
       if (onFileSelected) onFileSelected(null);
       if (value === undefined) setInternalFile(null);
@@ -90,7 +131,6 @@ const UploadArea: React.FC<UploadAreaProps> = ({
       return;
     }
 
-    // Check file size
     if (!isValidFileSize(file)) {
       if (onFileSelected) onFileSelected(null);
       if (value === undefined) setInternalFile(null);
@@ -103,7 +143,6 @@ const UploadArea: React.FC<UploadAreaProps> = ({
       return;
     }
 
-    // File is valid
     if (onFileSelected) onFileSelected(file);
     if (value === undefined) setInternalFile(file);
     setError(null);
@@ -138,16 +177,18 @@ const UploadArea: React.FC<UploadAreaProps> = ({
     inputRef.current?.click();
   };
 
+  const hasFile = file && !error;
+
   return (
     <div
-      className={`w-full max-w-2xl flex flex-col items-center border-4 border-dotted rounded-xl transition-colors duration-200 p-4 sm:p-6 md:p-8 ${
-        file && !error ? "justify-start py-6 sm:py-8" : "justify-center"
-      } ${
+      className={`group w-full flex flex-col items-center rounded-2xl border transition-all duration-300 px-6 py-10 sm:px-10 sm:py-12 ${
         dragActive
-          ? "border-blue-400 bg-black/60"
-          : "border-gray-600 bg-black/80"
+          ? "border-white/30 bg-white/[0.04]"
+          : hasFile
+            ? "border-white/15 bg-white/[0.02]"
+            : "border-white/10 bg-transparent hover:border-white/20 hover:bg-white/[0.02]"
       }`}
-      style={{ minHeight: height }}
+      style={height !== "auto" ? { minHeight: height } : undefined}
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
@@ -156,46 +197,80 @@ const UploadArea: React.FC<UploadAreaProps> = ({
       <input
         ref={inputRef}
         type="file"
-        accept={fileTypes.join(",")}
+        accept={acceptAttribute(fileTypes)}
         className="hidden"
         onChange={handleChange}
       />
-      <button
-        type="button"
-        onClick={handleButtonClick}
-        className="px-6 sm:px-8 py-3 sm:py-4 bg-gray-800 border border-gray-500 rounded-lg text-lg sm:text-xl font-semibold hover:bg-gray-700 transition-colors mb-4 sm:mb-6"
-      >
-        {buttonLabel}
-      </button>
-      <span className="text-gray-400 text-center mb-4">
-        or drag and drop an image here
-      </span>
-      {error && <span className="text-red-400 mt-2 text-center">{error}</span>}
-      {file && !error && !hidePreview && previewUrl && (
-        <div className="mt-4 sm:mt-6 flex flex-col items-center w-full max-w-full">
-          <span className="text-green-400 text-center break-all px-2 sm:px-4 mb-3 sm:mb-4 text-sm sm:text-base max-w-full">
-            Selected:{" "}
-            {file.name.length > 50
-              ? file.name.substring(0, 47) + "..."
-              : file.name}
+
+      {!hasFile && (
+        <>
+          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]">
+            <svg
+              className="h-5 w-5 text-white/40"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+              />
+            </svg>
+          </div>
+          <button
+            type="button"
+            onClick={handleButtonClick}
+            className="mb-3 rounded-full bg-white px-6 py-2.5 text-[13px] font-medium text-black hover:bg-white/90 transition-colors"
+          >
+            {buttonLabel}
+          </button>
+          <span className="text-[13px] text-white/35">
+            or drag and drop here
           </span>
-          <Image
-            src={previewUrl}
-            alt="Preview"
-            width={500}
-            height={192}
-            className="max-h-40 sm:max-h-48 max-w-full rounded shadow-lg object-contain"
-            unoptimized
-          />
+        </>
+      )}
+
+      {error && (
+        <span className="mt-2 text-[13px] text-red-400/90 text-center">
+          {error}
+        </span>
+      )}
+
+      {hasFile && !hidePreview && previewUrl && (
+        <div className="flex flex-col items-center w-full">
+          <div className="relative w-full max-h-48 mb-5 flex items-center justify-center">
+            <Image
+              src={previewUrl}
+              alt="Preview"
+              width={480}
+              height={192}
+              className="max-h-48 max-w-full rounded-lg object-contain"
+              unoptimized
+            />
+          </div>
+          <p className="text-[13px] text-white/50 text-center truncate max-w-full mb-1">
+            {file.name}
+          </p>
+          <button
+            type="button"
+            onClick={handleButtonClick}
+            className="text-[12px] text-white/35 hover:text-white/60 transition-colors underline underline-offset-2"
+          >
+            Choose a different file
+          </button>
         </div>
       )}
-      {showConfirm && file && !error && (
+
+      {showConfirm && hasFile && (
         <button
           type="button"
           onClick={onConfirm}
-          className="mt-4 sm:mt-6 px-6 sm:px-8 py-2 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-base sm:text-lg"
+          className="mt-6 w-full sm:w-auto rounded-full bg-white px-8 py-2.5 text-[13px] font-medium text-black hover:bg-white/90 transition-colors"
         >
-          Confirm Upload
+          {confirmLabel}
         </button>
       )}
     </div>

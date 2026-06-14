@@ -17,35 +17,44 @@ const AddLayerModal: React.FC<AddLayerModalProps> = ({
   onClose,
 }) => {
   if (!show) return null;
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4">
-      <div className="bg-gray-900 rounded-lg p-0 w-full max-w-2xl flex flex-col items-center shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="w-full flex flex-col items-center justify-center p-6">
-          <h2 className="text-lg font-bold mb-4">Add New Layer</h2>
-          <UploadArea
-            onFileSelected={onFileSelected}
-            value={newLayerImage}
-            buttonLabel="Upload Image"
-            showConfirm={false}
-            fileTypes={["image/png"]}
-            height="400px"
-            maxFileSize={5 * 1024 * 1024} // 5MB limit for PNG files
-          />
-          <div className="flex gap-2 mt-6">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0a0a0a] overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="px-6 pt-8 pb-6 flex flex-col items-center">
+          <p className="text-[11px] uppercase tracking-[0.15em] text-white/40 mb-2">
+            New layer
+          </p>
+          <h2 className="text-lg font-medium text-white mb-1">Add image</h2>
+          <p className="text-[13px] text-white/40 mb-6 text-center">
+            PNG or JPG · up to 5 MB
+          </p>
+
+          <div className="w-full">
+            <UploadArea
+              onFileSelected={onFileSelected}
+              value={newLayerImage}
+              buttonLabel="Choose image"
+              showConfirm={false}
+              fileTypes={["image/png", "image/jpeg", "image/jpg"]}
+              height="auto"
+              maxFileSize={5 * 1024 * 1024}
+            />
+          </div>
+
+          <div className="flex gap-3 mt-6 w-full">
             <button
+              type="button"
               onClick={onCreateLayer}
               disabled={!newLayerImage}
-              className={`px-4 py-2 text-white rounded text-sm font-semibold ${
-                newLayerImage 
-                  ? 'bg-blue-600 hover:bg-blue-700' 
-                  : 'bg-gray-500 cursor-not-allowed'
-              }`}
+              className="flex-1 rounded-full bg-white py-2.5 text-[13px] font-medium text-black hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              Create Layer
+              Add layer
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-semibold"
+              className="flex-1 rounded-full border border-white/20 py-2.5 text-[13px] text-white/60 hover:text-white hover:border-white/35 transition-colors"
             >
               Cancel
             </button>
@@ -56,4 +65,4 @@ const AddLayerModal: React.FC<AddLayerModalProps> = ({
   );
 };
 
-export default AddLayerModal; 
+export default AddLayerModal;

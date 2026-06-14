@@ -9,7 +9,7 @@ import {
   useCallback,
 } from "react";
 import { parseGIF, decompressFrames } from "gifuct-js";
-import GIF from "gif.js";
+import GIFEncoder from "gif-encoder-2";
 import LayeredCanvas from "./LayeredCanvas";
 import LayerList from "./LayerList";
 import FrameStrip from "./FrameStrip";
@@ -27,6 +27,11 @@ import type { User } from "@supabase/supabase-js";
 import SiteHeader from "../components/SiteHeader";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { saveTemplateToSupabase } from "./saveTemplate";
+import {
+  cloneEditorSnapshot,
+  pushSnapshot,
+  type EditorSnapshot,
+} from "./editorHistory";
 
 export default function EditPageContent() {
   const searchParams = useSearchParams();
@@ -94,6 +99,92 @@ export default function EditPageContent() {
   const [isMounted, setIsMounted] = useState(false);
   // Counter for generating stable frame IDs
   const frameIdCounter = useRef(0);
+
+  const editorStateRef = useRef({
+    frameLayers: [] as Layer[][],
+    frames: [] as Frame[],
+    selectedFrameIdx: 0,
+    selectedLayerId: null as string | null,
+  });
+  const undoStackRef = useRef<EditorSnapshot[]>([]);
+  const redoStackRef = useRef<EditorSnapshot[]>([]);
+  const gestureSnapshotRef = useRef<EditorSnapshot | null>(null);
+
+  useEffect(() => {
+    editorStateRef.current = {
+      frameLayers,
+      frames,
+      selectedFrameIdx,
+      selectedLayerId,
+    };
+  }, [frameLayers, frames, selectedFrameIdx, selectedLayerId]);
+
+  const applySnapshot = useCallback((snapshot: EditorSnapshot) => {
+    setFrameLayers(
+      snapshot.frameLayers.map((layers) => layers.map((layer) => ({ ...layer })))
+    );
+    setFrames(
+      snapshot.frames.map((frame) => ({
+        ...frame,
+        frame: frame.frame
+          ? { ...frame.frame, patch: frame.frame.patch }
+          : undefined,
+      }))
+    );
+    setSelectedFrameIdx(snapshot.selectedFrameIdx);
+    setSelectedLayerId(snapshot.selectedLayerId);
+  }, []);
+
+  const pushUndo = useCallback(() => {
+    undoStackRef.current = pushSnapshot(
+      undoStackRef.current,
+      cloneEditorSnapshot(editorStateRef.current)
+    );
+    redoStackRef.current = [];
+  }, []);
+
+  const beginGesture = useCallback(() => {
+    if (gestureSnapshotRef.current) return;
+    gestureSnapshotRef.current = cloneEditorSnapshot(editorStateRef.current);
+  }, []);
+
+  const commitGestureUndo = useCallback(() => {
+    const snap = gestureSnapshotRef.current;
+    if (!snap) return;
+    gestureSnapshotRef.current = null;
+    undoStackRef.current = pushSnapshot(undoStackRef.current, snap);
+    redoStackRef.current = [];
+  }, []);
+
+  const undo = useCallback(() => {
+    const stack = undoStackRef.current;
+    if (stack.length === 0) return;
+    const snapshot = stack[stack.length - 1];
+    undoStackRef.current = stack.slice(0, -1);
+    redoStackRef.current = pushSnapshot(
+      redoStackRef.current,
+      cloneEditorSnapshot(editorStateRef.current)
+    );
+    applySnapshot(snapshot);
+  }, [applySnapshot]);
+
+  const redo = useCallback(() => {
+    const stack = redoStackRef.current;
+    if (stack.length === 0) return;
+    const snapshot = stack[stack.length - 1];
+    redoStackRef.current = stack.slice(0, -1);
+    undoStackRef.current = pushSnapshot(
+      undoStackRef.current,
+      cloneEditorSnapshot(editorStateRef.current)
+    );
+    applySnapshot(snapshot);
+  }, [applySnapshot]);
+
+  const clearHistory = useCallback(() => {
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+    gestureSnapshotRef.current = null;
+  }, []);
 
   // Function to generate stable frame ID
   const generateFrameId = (prefix: string = "frame") => {
@@ -533,6 +624,8 @@ export default function EditPageContent() {
           );
           setSelectedFrameIdx(0);
           setSelectedLayerId("layer-1");
+          setFocusedElement("layer");
+          clearHistory();
           setIsLoading(false);
         } else {
           const img = new Image();
@@ -563,6 +656,8 @@ export default function EditPageContent() {
             ]);
             setSelectedFrameIdx(0);
             setSelectedLayerId("layer-1");
+            setFocusedElement("layer");
+            clearHistory();
             setIsLoading(false);
           };
           img.src = imgUrl;
@@ -573,7 +668,7 @@ export default function EditPageContent() {
       }
     }
     extractFrames();
-  }, [imgUrl, imgType, imgName]);
+  }, [imgUrl, imgType, imgName, clearHistory]);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -600,6 +695,7 @@ export default function EditPageContent() {
 
   // Handler for adding text layer
   const handleAddTextLayerClick = () => {
+    pushUndo();
     setFrameLayers((prev: Layer[][]) => {
       const currentFrameLayers = prev[selectedFrameIdx] || [];
       // Count existing text layers to determine the next number
@@ -645,6 +741,7 @@ export default function EditPageContent() {
       return;
     }
 
+    pushUndo();
     setFrameLayers((prev: Layer[][]) => {
       const newLayer: Layer = {
         id: `layer-${prev[selectedFrameIdx]?.length + 1 || 1}`,
@@ -676,6 +773,9 @@ export default function EditPageContent() {
       source.droppableId === "frames-droppable" &&
       destination.droppableId === "frames-droppable"
     ) {
+      if (source.index === destination.index) return;
+      pushUndo();
+
       const sourceIndex = source.index;
       const destinationIndex = destination.index;
 
@@ -715,6 +815,9 @@ export default function EditPageContent() {
       source.droppableId === "layers-droppable" &&
       destination.droppableId === "layers-droppable"
     ) {
+      if (source.index === destination.index) return;
+      pushUndo();
+
       setFrameLayers((prev: Layer[][]) =>
         prev.map((layers, idx) => {
           if (idx !== selectedFrameIdx) return layers;
@@ -801,6 +904,7 @@ export default function EditPageContent() {
   // Resize/rotate handlers
   const handleResizeMouseDown = (e: React.MouseEvent, layer: Layer) => {
     e.stopPropagation();
+    beginGesture();
     resizing.current = true;
     startPos.current = { x: e.clientX, y: e.clientY };
     startSize.current = {
@@ -832,9 +936,11 @@ export default function EditPageContent() {
     resizing.current = false;
     document.removeEventListener("mousemove", handleResizeMouseMove);
     document.removeEventListener("mouseup", handleResizeMouseUp);
+    commitGestureUndo();
   };
   const handleRotateMouseDown = (e: React.MouseEvent, layer: Layer) => {
     e.stopPropagation();
+    beginGesture();
     rotating.current = true;
     startPos.current = { x: e.clientX, y: e.clientY };
     startRotation.current = layer.rotation || 0;
@@ -864,6 +970,7 @@ export default function EditPageContent() {
     rotating.current = false;
     document.removeEventListener("mousemove", handleRotateMouseMove);
     document.removeEventListener("mouseup", handleRotateMouseUp);
+    commitGestureUndo();
   };
   // Drag selected image
   const handleImageMouseDown = (e: React.MouseEvent, layer: Layer) => {
@@ -875,6 +982,9 @@ export default function EditPageContent() {
       return;
     }
     e.stopPropagation();
+    setSelectedLayerId(layer.id);
+    setFocusedElement("layer");
+    beginGesture();
     dragging.current = true;
     startPos.current = { x: e.clientX, y: e.clientY };
     startOffset.current = { x: layer.x || 0, y: layer.y || 0 };
@@ -914,6 +1024,7 @@ export default function EditPageContent() {
     dragging.current = false;
     document.removeEventListener("mousemove", handleImageMouseMove);
     document.removeEventListener("mouseup", handleImageMouseUp);
+    commitGestureUndo();
   };
 
   // Flip handler
@@ -925,6 +1036,7 @@ export default function EditPageContent() {
     e.stopPropagation();
     if (layer.type !== "image") return;
 
+    pushUndo();
     setFrameLayers((prev: Layer[][]) =>
       prev.map((layers, idx) => {
         if (idx !== selectedFrameIdx) return layers;
@@ -977,7 +1089,7 @@ export default function EditPageContent() {
       return;
     }
 
-    setSaveBanner({ kind: "ok", message: "Template saved. Open Templates to see it." });
+    setSaveBanner({ kind: "ok", message: "Saved to gallery." });
     window.setTimeout(() => setSaveBanner(null), 5000);
   }, [
     user,
@@ -990,10 +1102,19 @@ export default function EditPageContent() {
 
   const doExport = async (format: "png" | "gif") => {
     setExporting(true);
+
+    const failExport = (message: string) => {
+      console.error(message);
+      setExporting(false);
+    };
+
     const visibleLayers = frameLayers[selectedFrameIdx].filter(
       (l) => (l.type === "image" && l.src) || l.type === "text"
     );
-    if (visibleLayers.length === 0) return;
+    if (visibleLayers.length === 0) {
+      failExport("Nothing to export on the current frame.");
+      return;
+    }
 
     if (format === "gif" && frames.length > 0) {
       // Calculate bounding box for all frames to ensure consistent export size
@@ -1029,85 +1150,60 @@ export default function EditPageContent() {
       const exportWidth = Math.round(globalMaxX - globalMinX);
       const exportHeight = Math.round(globalMaxY - globalMinY);
 
-      // Export all frames in the current frames array
-      const gifEncoder = new GIF({
-        workers: 2,
-        quality: 10,
-        width: exportWidth,
-        height: exportHeight,
-        workerScript: "/gif.worker.js",
-        transparent: "#000000", // Set black as transparent color
-      });
-
-      for (let i = 0; i < frames.length; i++) {
-        // For each frame, set the main image layer's src to the frame preview
-        const layersForFrame = frameLayers[i].map(
-          (layer: Layer, idx: number) => {
-            if (idx === 0 && layer.type === "image") {
-              return {
-                ...layer,
-                src: frames[i].preview,
-              };
-            }
-            return layer;
-          }
-        );
-
-        // Create full-size canvas first with transparent background
-        const fullCanvas = document.createElement("canvas");
-        fullCanvas.width = editorSize.width;
-        fullCanvas.height = editorSize.height;
-        const fullCtx = fullCanvas.getContext("2d", { alpha: true });
-
-        if (fullCtx) {
-          // Fill with black background for GIF transparency
-          fullCtx.fillStyle = "#000000";
-          fullCtx.fillRect(0, 0, fullCanvas.width, fullCanvas.height);
-
-          // Draw layers normally on the full canvas
-          await drawLayersToCanvas(layersForFrame, fullCanvas, 0, 0);
-        }
-
-        // Create the export canvas with cropped dimensions and transparent background
-        const exportCanvas = document.createElement("canvas");
-        exportCanvas.width = exportWidth;
-        exportCanvas.height = exportHeight;
-        const exportCtx = exportCanvas.getContext("2d", { alpha: true });
-
-        if (exportCtx) {
-          // Fill with black background for GIF transparency
-          exportCtx.fillStyle = "#000000";
-          exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-          // Draw the cropped portion from the full canvas
-          exportCtx.drawImage(
-            fullCanvas,
-            globalMinX,
-            globalMinY,
-            exportWidth,
-            exportHeight,
-            0,
-            0,
-            exportWidth,
-            exportHeight
-          );
-          gifEncoder.addFrame(exportCtx, {
-            copy: true,
-            delay: frames[i].frame?.delay || 100,
-          });
-        }
+      if (exportWidth <= 0 || exportHeight <= 0) {
+        failExport("Could not determine export size.");
+        return;
       }
 
-      gifEncoder.on("finished", function (blob: Blob) {
+      // Export all frames in the current frames array
+      const gifEncoder = new GIFEncoder(exportWidth, exportHeight, "neuquant", false, frames.length);
+      gifEncoder.setRepeat(0);
+      gifEncoder.start();
+
+      try {
+        for (let i = 0; i < frames.length; i++) {
+          const layersForFrame = frameLayers[i].map(
+            (layer: Layer, idx: number) => {
+              if (idx === 0 && layer.type === "image") {
+                return { ...layer, src: frames[i].preview };
+              }
+              return layer;
+            }
+          );
+
+          const fullCanvas = document.createElement("canvas");
+          fullCanvas.width = editorSize.width;
+          fullCanvas.height = editorSize.height;
+          const fullCtx = fullCanvas.getContext("2d");
+          if (!fullCtx) continue;
+          await drawLayersToCanvas(layersForFrame, fullCanvas, 0, 0);
+
+          const exportCanvas = document.createElement("canvas");
+          exportCanvas.width = exportWidth;
+          exportCanvas.height = exportHeight;
+          const exportCtx = exportCanvas.getContext("2d");
+          if (!exportCtx) continue;
+          exportCtx.drawImage(fullCanvas, globalMinX, globalMinY, exportWidth, exportHeight, 0, 0, exportWidth, exportHeight);
+
+          gifEncoder.setDelay(frames[i].frame?.delay || 100);
+          gifEncoder.addFrame(exportCtx);
+        }
+
+        gifEncoder.finish();
+        const buffer = gifEncoder.out.getData();
+        const blob = new Blob([buffer as unknown as ArrayBuffer], { type: "image/gif" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = "exported-image.gif";
         a.click();
-        setExporting(false);
-        setShowExportDialog(false);
-      });
-      gifEncoder.render();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : "GIF export failed.");
+      }
+
+      setExporting(false);
+      setShowExportDialog(false);
       return;
     }
 
@@ -1173,6 +1269,7 @@ export default function EditPageContent() {
 
   // Add blank frame
   const handleAddFrame = () => {
+    pushUndo();
     const blank = createBlankFrame(editorSize.width, editorSize.height);
     // Replace the generated ID with our stable ID
     blank.id = generateFrameId("blank-frame");
@@ -1192,6 +1289,7 @@ export default function EditPageContent() {
       return;
     }
 
+    pushUndo();
     setFrames((prev) => prev.filter((_, idx) => idx !== selectedFrameIdx));
     setFrameLayers((prev: Layer[][]) =>
       prev.filter((_, idx) => idx !== selectedFrameIdx)
@@ -1214,7 +1312,7 @@ export default function EditPageContent() {
 
     // Keep focus on frames after deletion
     setFocusedElement("frame");
-  }, [frames.length, selectedFrameIdx, frameLayers]);
+  }, [frames.length, selectedFrameIdx, frameLayers, pushUndo]);
 
   // Defensive: ensure selectedFrameIdx is valid
   const safeFrameIdx = Math.max(
@@ -1282,6 +1380,26 @@ export default function EditPageContent() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+      const target = e.target as HTMLElement;
+      const isEditingField =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      // Undo / redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl/Cmd+Y)
+      if (ctrlKey && !isEditingField) {
+        const key = e.key.toLowerCase();
+        if (key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+          return;
+        }
+        if ((key === "z" && e.shiftKey) || key === "y") {
+          e.preventDefault();
+          redo();
+          return;
+        }
+      }
 
       // Copy (Ctrl/Cmd+C)
       if (ctrlKey && e.key.toLowerCase() === "c") {
@@ -1311,6 +1429,7 @@ export default function EditPageContent() {
         if (focusedElement === "layer" && copiedLayer) {
           // Paste layer
           e.preventDefault();
+          pushUndo();
           setFrameLayers((prev: Layer[][]) =>
             prev.map((layers, idx) => {
               if (idx !== selectedFrameIdx) return layers;
@@ -1326,6 +1445,7 @@ export default function EditPageContent() {
         } else if (focusedElement === "frame" && copiedFrame) {
           // Paste frame
           e.preventDefault();
+          pushUndo();
           const newFrameIndex = frames.length;
 
           // Add the copied frame to frames array with new ID
@@ -1355,10 +1475,15 @@ export default function EditPageContent() {
 
       // Delete (Delete key or Backspace key)
       if (e.key === "Delete" || e.key === "Backspace") {
+        if (isEditingField) {
+          return;
+        }
+
         e.preventDefault();
 
-        // If focus is on a layer and a layer is selected, delete the layer
-        if (focusedElement === "layer" && selectedLayerId) {
+        // Delete selected layer unless focus is explicitly on frames
+        if (focusedElement !== "frame" && selectedLayerId) {
+          pushUndo();
           setFrameLayers((prev: Layer[][]) => {
             return prev.map((layers, idx) => {
               if (idx !== selectedFrameIdx) return layers;
@@ -1411,17 +1536,20 @@ export default function EditPageContent() {
     frames,
     handleDeleteFrame,
     focusedElement,
+    pushUndo,
+    undo,
+    redo,
   ]);
 
   // Show loading screen while validating image
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-black text-white">
+      <div className="min-h-screen flex flex-col bg-[#050505] text-white">
         <SiteHeader variant="edit" />
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p>Loading image...</p>
+            <div className="h-5 w-5 rounded-full border border-white/20 border-t-white/70 animate-spin mx-auto mb-4" />
+            <p className="text-[13px] text-white/40">Loading image…</p>
           </div>
         </div>
       </div>
@@ -1431,12 +1559,12 @@ export default function EditPageContent() {
   // Don't render DragDropContext on server side
   if (!isMounted) {
     return (
-      <div className="min-h-screen flex flex-col bg-black text-white">
+      <div className="min-h-screen flex flex-col bg-[#050505] text-white">
         <SiteHeader variant="edit" />
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p>Loading editor...</p>
+            <div className="h-5 w-5 rounded-full border border-white/20 border-t-white/70 animate-spin mx-auto mb-4" />
+            <p className="text-[13px] text-white/40">Loading editor…</p>
           </div>
         </div>
       </div>
@@ -1445,14 +1573,14 @@ export default function EditPageContent() {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="min-h-screen flex flex-col bg-black text-white">
+      <div className="min-h-screen flex flex-col bg-[#050505] text-white">
         <SiteHeader variant="edit" />
         {saveBanner && (
           <div
-            className={`shrink-0 px-4 py-2 text-center text-sm ${
+            className={`shrink-0 px-6 py-2.5 text-center text-[13px] border-b ${
               saveBanner.kind === "ok"
-                ? "bg-emerald-900/50 text-emerald-200"
-                : "bg-red-900/40 text-red-200"
+                ? "border-white/10 bg-white/[0.03] text-white/60"
+                : "border-red-500/20 bg-red-500/5 text-red-300/90"
             }`}
             role="status"
           >
@@ -1460,7 +1588,7 @@ export default function EditPageContent() {
           </div>
         )}
         <div
-          className="flex-1 flex flex-col items-center justify-center p-8 min-h-0 overflow-auto"
+          className="flex-1 flex flex-col items-center px-6 py-6 min-h-0 overflow-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setFocusedElement(null);
@@ -1468,8 +1596,18 @@ export default function EditPageContent() {
             }
           }}
         >
+          <div className="w-full max-w-5xl mb-5">
+            <p className="text-[11px] uppercase tracking-[0.15em] text-white/35 mb-1">
+              Editor
+            </p>
+            <p className="text-[13px] text-white/40">
+              Select a layer to move or resize · double-click text to edit ·{" "}
+              <span className="text-white/30">Ctrl/Cmd+Z to undo</span> · export when done
+            </p>
+          </div>
+
           <div
-            className="flex w-full max-w-5xl overflow-hidden gap-6"
+            className="flex w-full max-w-5xl overflow-hidden gap-5"
             style={{ height: editorSize.height }}
           >
             {/* Left: Superimposed Images */}

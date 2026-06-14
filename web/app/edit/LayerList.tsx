@@ -18,6 +18,9 @@ interface LayerListProps {
   editorHeight: number;
 }
 
+const iconBtnClass =
+  "p-2 rounded-full text-white/45 hover:text-white hover:bg-white/[0.06] transition-colors";
+
 const LayerList: React.FC<LayerListProps> = ({
   layers,
   selectedLayerId,
@@ -35,107 +38,62 @@ const LayerList: React.FC<LayerListProps> = ({
   const selectedLayer = layers.find((layer) => layer.id === selectedLayerId);
 
   return (
-    <div className="w-[350px] flex flex-col" style={{ height: editorHeight }}>
-      {/* Layers Section */}
-      <div
-        className={`bg-gray-800 rounded-lg shadow-inner flex flex-col p-4 ${
-          selectedLayer && selectedLayer.type === "text" && showTextProperties
-            ? "flex-1"
-            : "flex-1"
-        }`}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-white">Layers</span>
-          <div className="flex items-center gap-2">
+    <div
+      className="w-[300px] shrink-0 flex flex-col gap-3"
+      style={{ height: editorHeight }}
+    >
+      <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-white/40">
+            Layers
+          </span>
+          <div className="flex items-center gap-0.5">
             <button
               onClick={onAddTextLayerClick}
-              aria-label="Add Text Layer"
-              className="p-2 text-white hover:text-blue-300 flex items-center justify-center"
+              aria-label="Add text layer"
+              title="Add text"
+              className={iconBtnClass}
             >
               <svg
-                width="22"
-                height="22"
+                width="18"
+                height="18"
                 viewBox="0 0 22 22"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden
               >
                 <path d="M3 4H19V6H13V18H9V6H3V4Z" fill="currentColor" />
               </svg>
             </button>
             <button
               onClick={onAddLayerClick}
-              aria-label="Add Layer"
-              className="p-2 text-white hover:text-blue-300 flex items-center justify-center"
+              aria-label="Add image layer"
+              title="Add image"
+              className={iconBtnClass}
             >
               <svg
-                width="22"
-                height="22"
+                width="18"
+                height="18"
                 viewBox="0 0 22 22"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden
               >
                 <path
                   d="M11 4V18"
                   stroke="currentColor"
-                  strokeWidth="2.2"
+                  strokeWidth="2"
                   strokeLinecap="round"
                 />
                 <path
                   d="M4 11H18"
                   stroke="currentColor"
-                  strokeWidth="2.2"
+                  strokeWidth="2"
                   strokeLinecap="round"
                 />
               </svg>
             </button>
-            {showSaveTemplate && onSaveTemplateClick && (
-              <button
-                type="button"
-                onClick={onSaveTemplateClick}
-                disabled={saveTemplateLoading}
-                aria-label="Save as template"
-                title="Save as template"
-                className="flex items-center justify-center gap-1.5 px-2.5 py-2 min-w-[2.5rem] bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 text-xs font-semibold"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden
-                >
-                  <path
-                    d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M7 13h10M7 17h6M7 9h2"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M14 3v4h4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={onExportClick}
-              className="w-[70px] min-w-[70px] px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-semibold text-center"
-            >
-              Export
-            </button>
           </div>
         </div>
+
         <Droppable
           droppableId="layers-droppable"
           isDropDisabled={false}
@@ -145,13 +103,17 @@ const LayerList: React.FC<LayerListProps> = ({
           {(provided) => (
             <div className="flex-1 min-h-0">
               <ul
-                className="h-full overflow-y-auto space-y-2 pr-2"
+                className="h-full overflow-y-auto px-3 py-3 space-y-1.5"
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 style={{ scrollbarWidth: "thin" }}
               >
                 {layers.length === 0 && (
-                  <li className="text-gray-500 text-sm">No layers yet.</li>
+                  <li className="px-2 py-6 text-center text-[12px] text-white/30 leading-relaxed">
+                    No layers yet.
+                    <br />
+                    Add text or an image above.
+                  </li>
                 )}
                 {layers.map((layer, index) => (
                   <Draggable
@@ -164,32 +126,26 @@ const LayerList: React.FC<LayerListProps> = ({
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className={`bg-gray-700 rounded px-3 py-2 flex items-center gap-2 text-sm text-white cursor-move transition-shadow ${
-                          snapshot.isDragging ? "shadow-2xl bg-gray-600" : ""
-                        } ${
-                          layer.id === selectedLayerId
-                            ? "ring-2 ring-blue-400"
-                            : ""
+                        className={`rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-[13px] text-white/80 cursor-move transition-all border ${
+                          snapshot.isDragging
+                            ? "shadow-lg bg-white/[0.08] border-white/20"
+                            : layer.id === selectedLayerId
+                              ? "bg-white/[0.06] border-white/25 text-white"
+                              : "bg-transparent border-transparent hover:bg-white/[0.04] hover:border-white/10"
                         }`}
                         onClick={() => onSelectLayer(layer.id)}
                       >
-                        {layer.type === "image" ? (
-                          <span
-                            className="inline-block w-2 h-2 flex-shrink-0 bg-green-400 rounded-full"
-                            title="Image Layer"
-                          ></span>
-                        ) : layer.type === "text" ? (
-                          <span
-                            className="inline-block w-2 h-2 flex-shrink-0 bg-blue-400 rounded-full"
-                            title="Text Layer"
-                          ></span>
-                        ) : (
-                          <span
-                            className="inline-block w-2 h-2 flex-shrink-0 bg-gray-400 rounded-full"
-                            title="Blank Layer"
-                          ></span>
-                        )}
-                        {layer.name}
+                        <span
+                          className={`inline-block w-1.5 h-1.5 shrink-0 rounded-full ${
+                            layer.type === "text"
+                              ? "bg-white"
+                              : layer.type === "image"
+                                ? "bg-white/50"
+                                : "bg-white/25"
+                          }`}
+                          aria-hidden
+                        />
+                        <span className="truncate">{layer.name}</span>
                       </li>
                     )}
                   </Draggable>
@@ -199,11 +155,30 @@ const LayerList: React.FC<LayerListProps> = ({
             </div>
           )}
         </Droppable>
+
+        <div className="shrink-0 px-3 py-3 border-t border-white/[0.06] flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onExportClick}
+            className="w-full rounded-full bg-white py-2.5 text-[13px] font-medium text-black hover:bg-white/90 transition-colors"
+          >
+            Export
+          </button>
+          {showSaveTemplate && onSaveTemplateClick && (
+            <button
+              type="button"
+              onClick={onSaveTemplateClick}
+              disabled={saveTemplateLoading}
+              className="w-full rounded-full border border-white/20 py-2 text-[12px] text-white/60 hover:text-white hover:border-white/35 hover:bg-white/[0.04] disabled:opacity-40 transition-colors"
+            >
+              {saveTemplateLoading ? "Saving…" : "Save to gallery"}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Text Edit Panel - Separate scrollable section */}
       {selectedLayer && selectedLayer.type === "text" && showTextProperties && (
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-72 overflow-y-auto shrink-0">
           <TextEditPanel
             layer={selectedLayer}
             onUpdate={(updates) => onUpdateLayer(selectedLayer.id, updates)}

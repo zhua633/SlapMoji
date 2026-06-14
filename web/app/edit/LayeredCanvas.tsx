@@ -33,10 +33,10 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
   return (
     <div
       ref={editorRef}
-      className="flex-1 flex items-center justify-center bg-gray-800 relative rounded-xl"
+      className="flex-1 flex items-center justify-center bg-white/[0.03] border border-white/10 relative rounded-xl min-w-0"
     >
       {layers.length === 0 && (
-        <span className="text-gray-400">No image provided.</span>
+        <span className="text-[13px] text-white/30">No image provided</span>
       )}
       {layers.map((layer, idx) => {
         if (layer.type === "blank") return null;
@@ -151,31 +151,27 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
             ) : null}
             {isSelected && (
               <>
-                {/* Dotted outline */}
                 <div
-                  className="absolute inset-0 border-2 border-dotted border-blue-400 rounded pointer-events-none"
+                  className="absolute inset-0 border border-dashed border-white/50 rounded pointer-events-none"
                   style={{ zIndex: 10 }}
                 />
-                {/* Resize handle (bottom right) */}
                 <div
-                  className="absolute w-4 h-4 bg-blue-400 border-2 border-white rounded-full cursor-nwse-resize resize-handle"
-                  style={{ right: -10, bottom: -10, zIndex: 20 }}
+                  className="absolute w-3 h-3 bg-white border border-black/20 rounded-full cursor-nwse-resize resize-handle shadow-sm"
+                  style={{ right: -8, bottom: -8, zIndex: 20 }}
                   onMouseDown={(e) => onResizeMouseDown(e, layer)}
                 />
-                {/* Flip handles */}
-                {/* Horizontal flip (top left) */}
                 <div
-                  className="absolute w-4 h-4 bg-purple-400 border-2 border-white rounded-full cursor-pointer flip-handle flex items-center justify-center"
-                  style={{ left: -10, top: -10, zIndex: 20 }}
+                  className="absolute w-3 h-3 bg-white/90 border border-black/20 rounded-full cursor-pointer flip-handle flex items-center justify-center shadow-sm"
+                  style={{ left: -8, top: -8, zIndex: 20 }}
                   onClick={(e) => onFlipClick(e, layer, "horizontal")}
-                  title="Flip Horizontal"
+                  title="Flip horizontal"
                 >
                   <svg
-                    width="12"
-                    height="12"
+                    width="10"
+                    height="10"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="white"
+                    stroke="#050505"
                     strokeWidth="2"
                   >
                     <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3" />
@@ -186,19 +182,18 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                     <path d="M12 2v2" />
                   </svg>
                 </div>
-                {/* Vertical flip (top right) */}
                 <div
-                  className="absolute w-4 h-4 bg-purple-400 border-2 border-white rounded-full cursor-pointer flip-handle flex items-center justify-center"
-                  style={{ right: -10, top: -10, zIndex: 20 }}
+                  className="absolute w-3 h-3 bg-white/90 border border-black/20 rounded-full cursor-pointer flip-handle flex items-center justify-center shadow-sm"
+                  style={{ right: -8, top: -8, zIndex: 20 }}
                   onClick={(e) => onFlipClick(e, layer, "vertical")}
-                  title="Flip Vertical"
+                  title="Flip vertical"
                 >
                   <svg
-                    width="12"
-                    height="12"
+                    width="10"
+                    height="10"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="white"
+                    stroke="#050505"
                     strokeWidth="2"
                   >
                     <path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3" />
@@ -209,16 +204,16 @@ const LayeredCanvas: React.FC<LayeredCanvasProps> = ({
                     <path d="M2 12h2" />
                   </svg>
                 </div>
-                {/* Rotate handle (top center) */}
                 <div
-                  className="absolute w-4 h-4 bg-yellow-400 border-2 border-white rounded-full cursor-pointer rotate-handle"
+                  className="absolute w-3 h-3 bg-white border border-black/20 rounded-full cursor-grab rotate-handle shadow-sm"
                   style={{
                     left: "50%",
-                    top: -24,
+                    top: -20,
                     transform: "translateX(-50%)",
                     zIndex: 20,
                   }}
                   onMouseDown={(e) => onRotateMouseDown(e, layer)}
+                  title="Rotate"
                 />
               </>
             )}
