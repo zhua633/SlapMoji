@@ -1126,7 +1126,12 @@ export default function EditPageContent() {
       for (let i = 0; i < frames.length; i++) {
         const layersForFrame = frameLayers[i].map(
           (layer: Layer, idx: number) => {
-            if (idx === 0 && layer.type === "image") {
+            if (
+              idx === 0 &&
+              layer.type === "image" &&
+              frames[i] &&
+              layer.src === frames[i].preview
+            ) {
               return {
                 ...layer,
                 src: frames[i].preview,
@@ -1164,7 +1169,12 @@ export default function EditPageContent() {
         for (let i = 0; i < frames.length; i++) {
           const layersForFrame = frameLayers[i].map(
             (layer: Layer, idx: number) => {
-              if (idx === 0 && layer.type === "image") {
+              if (
+                idx === 0 &&
+                layer.type === "image" &&
+                frames[i] &&
+                layer.src === frames[i].preview
+              ) {
                 return { ...layer, src: frames[i].preview };
               }
               return layer;
