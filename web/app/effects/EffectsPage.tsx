@@ -77,14 +77,14 @@ export default function EffectsPage() {
       );
     });
 
-    const settled = await Promise.all(
-      EFFECTS.map(async (effect) => {
-        const result = await runEffect(effect.id, selectedFile);
-        return [effect.id, result] as const;
-      })
-    );
+    // Run sequentially: the free-tier backend has a tiny worker pool and times
+    // out (503) when several GIF jobs compete for ~1 vCPU at once. One at a time
+    // keeps each request well under the server's per-request budget.
+    for (const effect of EFFECTS) {
+      const result = await runEffect(effect.id, selectedFile);
+      setResults((prev) => ({ ...prev, [effect.id]: result }));
+    }
 
-    setResults(Object.fromEntries(settled));
     setRunning(false);
   };
 
@@ -97,7 +97,7 @@ export default function EffectsPage() {
             Effects
           </h1>
           <p className="text-white/60 text-sm">
-            Upload an image once — all effects run in parallel.
+            Upload an image once — each effect runs one after another.
           </p>
         </div>
 
