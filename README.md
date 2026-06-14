@@ -23,9 +23,9 @@ Make a GIF for your Slack emoji/Discord emote!
 [Full effects walkthrough (MP4)](docs/assets/slapmoji-effects.mp4)
 
 
-| Frame 1 | Frame 2 |
+| Wiggle | Zoom |
 | :---: | :---: |
-| ![Wiggle effect frame 1](docs/assets/slapmoji-wiggle.gif) | ![Wiggle effect frame 2](docs/assets/slapmoji-wiggle.gif) |
+| ![Wiggle effect](docs/assets/slapmoji-wiggle.gif) | ![Zoom effect](docs/assets/slapmoji-zoom.gif) |
 
 Monorepo: **Next.js** frontend in [`web/`](web/) and **Spring Boot** API in [`backend/`](backend/).
 
